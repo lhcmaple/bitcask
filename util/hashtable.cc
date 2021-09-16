@@ -12,7 +12,7 @@ static bool byteEqual(const string_view &sv1, const string_view &sv2) {
     return true;
 }
 
-HashTable::HashTable(size_t buckets = 10) : arena_(new Arena), table_size_(buckets), count_(0) {
+HashTable::HashTable(size_t buckets) : arena_(new Arena), table_size_(buckets), count_(0) {
     table_ = static_cast<Node **>(arena_->alloc(sizeof(Node *) * table_size_));
     memset(table_, 0, sizeof(Node *) * table_size_);
 }
@@ -75,12 +75,14 @@ void HashTable::resize() {
     size_t oldsize = table_size_;
     table_size_ *= 2;
     table_ = static_cast<Node **>(arena_->alloc(sizeof(Node *) * table_size_));
+    memset(table_, 0, sizeof(Node *) * table_size_);
     for(int k = 0; k < oldsize; k++) {
         Node *cur = oldtable[k];
         while(cur) {
             Node *next = cur->hash_next;
             size_t kindex = cur->khash % table_size_;
-            cur->hash_next = table_[kindex]->hash_next;
+            assert(kindex < table_size_);
+            cur->hash_next = table_[kindex];
             table_[kindex] = cur;
             cur = next;
         }
@@ -91,8 +93,9 @@ void HashTable::resize() {
 void HashTable::erase(const string_view &key) {
     uint32_t khash = Hash(key.data(), key.size());
     Node **pcur = find(key, khash);
+    assert(*pcur != nullptr);
     Node *cur = *pcur;
-    assert(cur != nullptr);
     *pcur = cur->hash_next;
+    count_--;
     arena_->release(cur);
 }

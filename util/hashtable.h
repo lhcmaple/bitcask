@@ -1,5 +1,9 @@
-#ifndef _HASHTABLE_H
-#define _HASHTABLE_H
+// hashtable 根据Node的key来进行哈希映射与判断同异, 
+// Node保存对应value在文件的handle, 
+// 并且保存一个sequence值, 如果文件中的key-sequence与哈希表不同, 则表示该key-value条目已失效
+
+#ifndef HASHTABLE_H
+#define HASHTABLE_H
 
 #include <cstddef>
 #include <cstdint>

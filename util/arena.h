@@ -1,15 +1,15 @@
 //arena 是一个内存分配器, 最大的功能是将许多小块内存的申请转成大块内存的申请, 尽可能地避免内存碎片的生成
 //external synchronization is needed while being accessed by multiple threads
 
-#ifndef _ARENA_H
-#define _ARENA_H
+#ifndef ARENA_H
+#define ARENA_H
 
 #include <cstddef>
 #include <cassert>
 #include <memory>
 #include <map>
 
-#include <config.h>
+#include "config.h"
 
 using std::map;
 

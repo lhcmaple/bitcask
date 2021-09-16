@@ -5,7 +5,7 @@
 // Simple hash function used for internal data structures
 
 #ifndef HASH_H
-#define HASH_H_
+#define HASH_H
 
 #include <cstddef>
 #include <cstdint>
