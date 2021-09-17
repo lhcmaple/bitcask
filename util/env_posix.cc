@@ -114,6 +114,7 @@ inline RandomReadFile *posixEnv::newRandomReadFile(const string_view &fname) {
     return posixRandomReadFile::newposixRandomReadFile(fname);
 }
 
-Env *Env::newEnv() {
-    return new posixEnv;
+inline Env *Env::globalEnv() {
+    static posixEnv env;
+    return &env;
 }

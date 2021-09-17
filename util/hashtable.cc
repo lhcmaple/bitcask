@@ -37,7 +37,7 @@ Node **HashTable::find(const string_view &key, uint32_t khash) {
     return pcur;
 }
 
-const Node *HashTable::insert(uint64_t sequence, const Handle &handle, const string_view &key) {
+const Node *HashTable::insert(const string_view &key, const Handle &handle) {
     uint32_t khash = Hash(key.data(), key.size());
     Node *cur = *find(key, khash);
     if(cur == nullptr) {
@@ -53,7 +53,6 @@ const Node *HashTable::insert(uint64_t sequence, const Handle &handle, const str
             resize();
         }
     }
-    cur->sequence = sequence;
     cur->handle = handle;
     return cur;
 }
@@ -98,4 +97,50 @@ void HashTable::erase(const string_view &key) {
     *pcur = cur->hash_next;
     count_--;
     arena_->release(cur);
+}
+
+class HashTable::Iterator : public Iter {
+private:
+    HashTable *ht_;
+    Node *cur_;
+public:
+    Iterator(HashTable *ht) : ht_(ht) {
+        cur_ = nullptr;
+    }
+    bool isValid() override {
+        return cur_ != nullptr;
+    }
+    void seekToFirst() override {
+        size_t kindex = 0;
+        while(kindex < ht_->table_size_ && ht_->table_[kindex] == nullptr) {
+            kindex++;
+        }
+        if(kindex == ht_->table_size_) {
+            cur_ = nullptr;
+        } else {
+            cur_ = ht_->table_[kindex];
+        }
+    }
+    void next() override {
+        if(cur_->hash_next != nullptr) {
+            cur_ = cur_->hash_next;
+        } else {
+            size_t kindex = cur_->khash % ht_->table_size_ + 1;
+            while(kindex < ht_->table_size_ && ht_->table_[kindex] == nullptr) {
+                kindex++;
+            }
+            if(kindex == ht_->table_size_) {
+                cur_ = nullptr;
+            } else {
+                cur_ = ht_->table_[kindex];
+            }
+        }
+    }
+    void *get() override {
+        return cur_;
+    }
+};
+
+Iter *HashTable::newIter() {
+    return new Iterator(this);
 }

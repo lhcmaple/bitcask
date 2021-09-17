@@ -2,7 +2,7 @@
 
 [ -d .Test ] || mkdir .Test
 
-CPPFLAG="-I./util/ -std=c++17"
+CPPFLAG="-I./util/ -I./include/ -std=c++17"
 
 # arena_test
 # echo "-----test arena-----"
@@ -27,8 +27,14 @@ CPPFLAG="-I./util/ -std=c++17"
 # echo "-----hashtable tested-----"
 
 # env_test
-echo "-----test env-----"
-g++ $CPPFLAG -o .Test/env_test util/env_test.cc util/env_posix.cc
-./.Test/env_test
-rm .Test/env_file
-echo "-----env tested-----"
+# echo "-----test env-----"
+# g++ $CPPFLAG -o .Test/env_test util/env_test.cc util/env_posix.cc
+# ./.Test/env_test
+# rm .Test/env_file
+# echo "-----env tested-----"
+
+# crc32c_test
+echo "-----test crc32c-----"
+g++ $CPPFLAG -o .Test/crc32c_test util/crc32c_test.cc util/crc32c.cc
+./.Test/crc32c_test
+echo "-----crc32c tested-----"

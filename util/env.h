@@ -21,7 +21,7 @@ public:
     virtual RandomReadFile *newRandomReadFile(const string_view &fname) = 0;
     virtual int newThread(FunctionHandle func, void *arg) = 0;
     virtual void sleep(int microseconds) = 0;
-    static Env *newEnv();
+    static Env *globalEnv();
 };
 
 class WriteFile {

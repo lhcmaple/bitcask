@@ -12,17 +12,20 @@
 
 #include "arena.h"
 #include "hash.h"
+#include "iter.h"
 
 using std::string_view;
 
 struct Handle {
-
+    uint64_t file_id;
+    uint64_t sequence;
+    size_t offset;
+    size_t size;
 };
 
 struct Node {
     Node *hash_next;
     uint32_t khash;
-    uint64_t sequence;
     Handle handle;
     size_t key_length;
     char key[1];
@@ -39,12 +42,14 @@ private:
     Node **find(const string_view &key, uint32_t khash);
     void resize();
 public:
+    class Iterator;
     HashTable(size_t buckets = 10);
     ~HashTable();
 
     const Node *find(const string_view &key);
-    const Node *insert(uint64_t sequence, const Handle &handle, const string_view &key);
+    const Node *insert(const string_view &key, const Handle &handle);
     void erase(const string_view &key);
+    Iter *newIter();
 };
 
 #endif

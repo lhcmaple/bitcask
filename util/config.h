@@ -1,7 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-//32KB
+// 32KB
 #define ARENA_BLOCK_SIZE 32768
+// 32MB
+#define LOG_FILE_SIZE_THRESHOLD 33554432
 
 #endif
