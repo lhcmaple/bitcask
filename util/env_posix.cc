@@ -12,6 +12,7 @@ public:
         return posixRandomReadFile::newposixRandomReadFile(fname);
     }
     virtual int newThread(FunctionHandle func, void *arg) override;
+    virtual void sleep(int microseconds) override;
 };
 
 int posixEnv::newThread(FunctionHandle func, void *arg) {
@@ -24,7 +25,7 @@ private:
     int fd;
 public:
     posixWriteFile(const string_view &fname, bool iscreat);
-    int write(const string_view &data) override;
+    ssize_t write(const string_view &data) override;
     int flush() override;
     ~posixWriteFile() override;
 
@@ -39,7 +40,7 @@ public:
 };
 
 posixWriteFile::posixWriteFile(const string_view &fname, bool iscreat) {
-    int O_FLAG = O_WRONLY;
+    int O_FLAG = O_WRONLY | O_APPEND;
     if(iscreat) {
         O_FLAG |= O_CREAT;
     }
@@ -50,12 +51,12 @@ posixWriteFile::~posixWriteFile() {
     close(fd);
 }
 
-int posixWriteFile::write(const string_view &data) {
-    //
+ssize_t posixWriteFile::write(const string_view &data) {
+    return ::write(fd, data.data(), data.size());
 }
 
 int posixWriteFile::flush() {
-    //
+    return fsync(fd);
 }
 
 class posixRandomReadFile : public RandomReadFile {
@@ -63,8 +64,8 @@ private:
     int fd;
 public:
     posixRandomReadFile(const string_view &fname);
-    int read(size_t size, string *data, int offset) override;
-    int read(size_t size, string *data) override;
+    ssize_t read(size_t size, string *data, int offset) override;
+    ssize_t read(size_t size, string *data) override;
     ~posixRandomReadFile() override;
 
     static posixRandomReadFile *newposixRandomReadFile(const string_view &fname) {
@@ -85,12 +86,25 @@ posixRandomReadFile::~posixRandomReadFile() {
     close(fd);
 }
 
-int posixRandomReadFile::read(size_t size, string *data, int offset) {
-    //
+ssize_t posixRandomReadFile::read(size_t size, string *data, int offset) {
+    lseek(fd, offset, SEEK_SET);
+    if(size == 0) {
+        return 0;
+    }
+    return read(size, data);
 }
 
-int posixRandomReadFile::read(size_t size, string *data, int offset) {
-    //
+ssize_t posixRandomReadFile::read(size_t size, string *data) {
+    assert(data != nullptr);
+    data->clear();
+    data->resize(size);
+    ssize_t nread = ::read(fd, data->data(), size);
+    if(nread < 0) {
+        data->clear();
+        return nread;
+    }
+    data->resize(nread);
+    return nread;
 }
 
 Env *Env::newEnv() {
