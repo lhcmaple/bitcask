@@ -5,19 +5,19 @@ class posixRandomReadFile;
 
 class posixEnv : public Env {
 public:
-    inline WriteFile *newWriteFile(const string_view &fname, bool iscreat = false) override {
-        return posixWriteFile::newposixWriteFile(fname, iscreat);
-    }
-    inline RandomReadFile *newRandomReadFile(const string_view &fname) override {
-        return posixRandomReadFile::newposixRandomReadFile(fname);
-    }
-    virtual int newThread(FunctionHandle func, void *arg) override;
-    virtual void sleep(int microseconds) override;
+    WriteFile *newWriteFile(const string_view &fname, bool iscreat = false) override;
+    RandomReadFile *newRandomReadFile(const string_view &fname) override;
+    int newThread(FunctionHandle func, void *arg) override;
+    void sleep(int microseconds) override;
 };
 
 int posixEnv::newThread(FunctionHandle func, void *arg) {
     //
     return 0;
+}
+
+void posixEnv::sleep(int microseconds) {
+    
 }
 
 class posixWriteFile : public WriteFile{
@@ -105,6 +105,13 @@ ssize_t posixRandomReadFile::read(size_t size, string *data) {
     }
     data->resize(nread);
     return nread;
+}
+
+inline WriteFile *posixEnv::newWriteFile(const string_view &fname, bool iscreat) {
+    return posixWriteFile::newposixWriteFile(fname, iscreat);
+}
+inline RandomReadFile *posixEnv::newRandomReadFile(const string_view &fname) {
+    return posixRandomReadFile::newposixRandomReadFile(fname);
 }
 
 Env *Env::newEnv() {

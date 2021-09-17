@@ -21,7 +21,14 @@ CPPFLAG="-I./util/ -std=c++17"
 # echo
 
 # hashtable_test
-echo "-----test hashtable-----"
-g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
-./.Test/hashtable_test
-echo "-----hashtable tested-----"
+# echo "-----test hashtable-----"
+# g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
+# ./.Test/hashtable_test
+# echo "-----hashtable tested-----"
+
+# env_test
+echo "-----test env-----"
+g++ $CPPFLAG -o .Test/env_test util/env_test.cc util/env_posix.cc
+./.Test/env_test
+rm .Test/env_file
+echo "-----env tested-----"
