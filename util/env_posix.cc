@@ -1,26 +1,32 @@
 #include "env.h"
 
+#include <pthread.h>
+
 class posixWriteFile;
 class posixRandomReadFile;
+class posixMutex;
 
 class posixEnv : public Env {
 public:
     WriteFile *newWriteFile(const string_view &fname, bool iscreat = false) override;
     RandomReadFile *newRandomReadFile(const string_view &fname) override;
+    Mutex *newMutex() override {
+        return new posixMutex;
+    }
     int newThread(FunctionHandle func, void *arg) override;
     void sleep(int microseconds) override;
 };
 
 int posixEnv::newThread(FunctionHandle func, void *arg) {
-    //
-    return 0;
+    pthread_t pid;
+    return pthread_create(&pid, nullptr, func, arg);
 }
 
 void posixEnv::sleep(int microseconds) {
     
 }
 
-class posixWriteFile : public WriteFile{
+class posixWriteFile : public WriteFile {
 private:
     int fd;
 public:
@@ -42,7 +48,7 @@ public:
 posixWriteFile::posixWriteFile(const string_view &fname, bool iscreat) {
     int O_FLAG = O_WRONLY | O_APPEND;
     if(iscreat) {
-        O_FLAG |= O_CREAT;
+        O_FLAG |= O_CREAT | O_TRUNC;
     }
     fd = open(fname.data(), O_FLAG, S_IRWXU);
 }
@@ -106,6 +112,26 @@ ssize_t posixRandomReadFile::read(size_t size, string *data) {
     data->resize(nread);
     return nread;
 }
+
+class posixMutex : public Mutex {
+private:
+    pthread_mutex_t *mutex_;
+public:
+    posixMutex() {
+        mutex_ = new pthread_mutex_t();
+        pthread_mutex_init(mutex_, nullptr);
+    }
+    void lock() override {
+        pthread_mutex_lock(mutex_);
+    }
+    void unlock() override {
+        pthread_mutex_unlock(mutex_);
+    }
+    ~posixMutex() override {
+        pthread_mutex_destroy(mutex_);
+        delete mutex_;
+    }
+};
 
 inline WriteFile *posixEnv::newWriteFile(const string_view &fname, bool iscreat) {
     return posixWriteFile::newposixWriteFile(fname, iscreat);
