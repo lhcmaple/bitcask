@@ -1,17 +1,5 @@
 #include "hashtable.h"
 
-static bool byteEqual(const string_view &sv1, const string_view &sv2) {
-    if(sv1.size() != sv2.size()) {
-        return false;
-    }
-    for(int k = 0; k < sv1.size(); k++) {
-        if(sv1[k] != sv2[k]) {
-            return false;
-        }
-    }
-    return true;
-}
-
 HashTable::HashTable(size_t buckets) : arena_(new Arena), table_size_(buckets), count_(0) {
     table_ = static_cast<Node **>(arena_->alloc(sizeof(Node *) * table_size_));
     memset(table_, 0, sizeof(Node *) * table_size_);
@@ -31,7 +19,7 @@ Node **HashTable::find(const string_view &key, uint32_t khash) {
     uint32_t kindex = khash % table_size_;
     Node **pcur = &table_[kindex];
     while(*pcur && 
-        !byteEqual(string_view((*pcur)->key, (*pcur)->key_length), key)) {
+        string_view((*pcur)->key, (*pcur)->key_length) != key) {
         pcur = &((*pcur)->hash_next);
     }
     return pcur;

@@ -28,14 +28,13 @@ int DBImpl::put(const string_view &key, const string_view &value) {
     if(error) {
         return -1;
     }
-    uint64_t sequence;
-    {
+    Handle handle;
+    GUARD {
         Lock lock(mutex_);
-        sequence = lb_->newSequence();
-        lb_->append(key, value, sequence);
-        Handle handle;
-        handle.file_id = lb_->;
-        //
+        if(lb_->append(key, value, &handle) != 0) {
+            error = true;
+            return -1;
+        }
         ht_->insert(key, handle);
     }
     return 0;
@@ -48,7 +47,7 @@ int DBImpl::get(const string_view &key, string *value) {
     if(value != nullptr) {
         value->clear();
     }
-    const Node * cur = ht_->find(key);
+    const Node *cur = ht_->find(key);
     if(cur == nullptr) {
         return -1;
     }
@@ -56,13 +55,7 @@ int DBImpl::get(const string_view &key, string *value) {
 }
 
 int DBImpl::del(const string_view &key) {
-    if(error) {
-        return -1;
-    }
-    lb_->append(key, "");
-    ht_->erase(key);
-    //
-    return 0;
+    return put(key, "");
 }
 
 struct Info {
@@ -82,6 +75,10 @@ int DBImpl::compact(bool background = true) {
     if(error) {
         return -1;
     }
+    if(iscompacting_.load() == true) {
+        return 0;
+    }
+    iscompacting_.store(true);
     Info info;
     info.impl = this;
     info.background = background;

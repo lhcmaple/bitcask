@@ -22,6 +22,7 @@ public:
     virtual int compact(bool background = true) = 0;
     // 迭代器
     virtual Iter *newIter() = 0;
+    virtual bool isValid() = 0;
     virtual ~DB() {}
 };
 

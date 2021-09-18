@@ -29,10 +29,7 @@ private:
     uint64_t cur_sequence_;
 
     int write(const string_view &data);
-    void dump();
-    inline uint64_t newFileID() {
-        return cur_fileid_++;
-    }
+    int dump();
 public:
     LogBuilder() {
         activelist_.prev = &activelist_;
@@ -42,14 +39,9 @@ public:
     }
     static LogBuilder *newLogBuilder(const string_view &db_name, HashTable *htable);
     int append(const string_view &key, const string_view &value, 
-        uint64_t sequence);
-    int compact(bool background = true);
-    inline uint64_t newSequence() {
-        return cur_sequence_++;
-    }
-    ~LogBuilder() {
-        delete wf_;
-    }
+        Handle *handle);
+    int compact(bool background = true); //
+    ~LogBuilder();
 };
 
 #endif

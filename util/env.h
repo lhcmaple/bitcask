@@ -12,8 +12,11 @@ using std::string;
 
 class WriteFile;
 class RandomReadFile;
+class Mutex;
 
 typedef void *(*FunctionHandle)(void *);
+
+#define GUARD
 
 class Env {
 public:

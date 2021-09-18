@@ -21,10 +21,10 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17"
 # echo
 
 # hashtable_test
-# echo "-----test hashtable-----"
-# g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
-# ./.Test/hashtable_test
-# echo "-----hashtable tested-----"
+echo "-----test hashtable-----"
+g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
+./.Test/hashtable_test
+echo "-----hashtable tested-----"
 
 # env_test
 # echo "-----test env-----"
@@ -34,7 +34,7 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17"
 # echo "-----env tested-----"
 
 # crc32c_test
-echo "-----test crc32c-----"
-g++ $CPPFLAG -o .Test/crc32c_test util/crc32c_test.cc util/crc32c.cc
-./.Test/crc32c_test
-echo "-----crc32c tested-----"
+# echo "-----test crc32c-----"
+# g++ $CPPFLAG -o .Test/crc32c_test util/crc32c_test.cc util/crc32c.cc
+# ./.Test/crc32c_test
+# echo "-----crc32c tested-----"
