@@ -1,6 +1,9 @@
 #include "env.h"
 
 #include <pthread.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <dirent.h>
 
 class posixWriteFile;
 class posixRandomReadFile;
@@ -14,16 +17,26 @@ public:
         return new posixMutex;
     }
     int newThread(FunctionHandle func, void *arg) override;
-    void sleep(int microseconds) override;
+    int readDir(const string_view &dir_name, vector<string> *files) override;
 };
+
+int posixEnv::readDir(const string_view &dir_name, vector<string> *files) {
+    files->clear();
+    DIR *dir = opendir(dir_name.data());
+    if(dir == nullptr) {
+        return -1;
+    }
+    struct dirent *content = nullptr;
+    while(content = readdir(dir)) {
+        files->push_back(content->d_name);
+    }
+    closedir(dir);
+    return 0;
+}
 
 int posixEnv::newThread(FunctionHandle func, void *arg) {
     pthread_t pid;
     return pthread_create(&pid, nullptr, func, arg);
-}
-
-void posixEnv::sleep(int microseconds) {
-    
 }
 
 class posixWriteFile : public WriteFile {

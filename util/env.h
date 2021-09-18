@@ -3,12 +3,13 @@
 
 #include <string>
 #include <cstddef>
-#include <unistd.h>
-#include <fcntl.h>
 #include <cassert>
+#include <vector>
+#include <utility>
 
 using std::string_view;
 using std::string;
+using std::vector;
 
 class WriteFile;
 class RandomReadFile;
@@ -24,7 +25,7 @@ public:
     virtual RandomReadFile *newRandomReadFile(const string_view &fname) = 0;
     virtual Mutex *newMutex();
     virtual int newThread(FunctionHandle func, void *arg) = 0;
-    virtual void sleep(int microseconds) = 0;
+    virtual int readDir(const string_view &dir_name, vector<string> *files) = 0;
     static Env *globalEnv();
 };
 
