@@ -2,7 +2,7 @@
 
 [ -d .Test ] || mkdir .Test
 
-CPPFLAG="-I./util/ -I./include/ -std=c++17"
+CPPFLAG="-I./util/ -I./include/ -std=c++17 -lpthread"
 
 # arena_test
 # echo "-----test arena-----"
@@ -21,10 +21,12 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17"
 # echo
 
 # hashtable_test
-echo "-----test hashtable-----"
-g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
-./.Test/hashtable_test
-echo "-----hashtable tested-----"
+# echo "-----test hashtable-----"
+# g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
+# ./.Test/hashtable_test
+# echo "-----hashtable tested-----"
+
+# echo
 
 # env_test
 # echo "-----test env-----"
@@ -33,8 +35,32 @@ echo "-----hashtable tested-----"
 # rm .Test/env_file
 # echo "-----env tested-----"
 
+# echo
+
 # crc32c_test
 # echo "-----test crc32c-----"
 # g++ $CPPFLAG -o .Test/crc32c_test util/crc32c_test.cc util/crc32c.cc
 # ./.Test/crc32c_test
 # echo "-----crc32c tested-----"
+
+function countline {
+    totalline=0
+    for name in `ls`
+    do
+        if [ -d $name ] 
+        then
+            cd $name
+            line=`countline $name`
+            totalline=$((totalline + line))
+            cd ..
+        fi
+    done
+    for name in `ls | grep -E "(cc$)|(h$)"`
+    do
+        line=`wc -l $name | awk '{print $1}'`
+        totalline=$((totalline + line))
+    done
+    echo $totalline
+}
+
+# countline

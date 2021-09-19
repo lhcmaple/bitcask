@@ -6,19 +6,22 @@
 #include "hashtable.h"
 
 #include <cstdint>
+#include <string>
+
+using std::string;
 
 class LogReader {
 private:
-    uint64_t fileid_;
+    uint64_t file_id_;
     RandomReadFile *rf_;
 
     class Iterator;
 public:
-    static LogReader *newLogReader(uint64_t fileid);
-    LogReader(uint64_t fileid) : fileid_(fileid) {
-        rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(fileid_) + ".log");
+    static LogReader *newLogReader(uint64_t file_id);
+    LogReader(uint64_t file_id) : file_id_(file_id) {
+        rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(file_id_) + ".log");
     }
-    void seek(const Handle &handle, string *value);
+    int seek(const Handle &handle, string *data);
     ~LogReader() {
         delete rf_;
     }
@@ -26,7 +29,22 @@ public:
 };
 
 class HIndexReader {
+private:
+    uint64_t file_id_;
+    RandomReadFile *rf_;
+    string data;
 
+    class Iterator;
+
+    RandomReadFile *examine();
+public:
+    static HIndexReader *newHIndexReader(uint64_t file_id);
+    HIndexReader(uint64_t file_id) : file_id_(file_id) {
+        rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(file_id_) + ".hindex");
+        if(rf_ != nullptr) { //校验索引完整性
+            rf_ = examine();
+        }
+    }
 };
 
 #endif

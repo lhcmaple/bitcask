@@ -3,6 +3,7 @@
 #include "crc32c.h"
 
 #include <string>
+#include <cassert>
 
 using std::string;
 
@@ -48,7 +49,7 @@ public:
         }
     }
     void *get() override {
-        return data_cur_.data() + 4;
+        return data_cur_.data();
     }
     ~Iterator() override {
 
@@ -59,8 +60,8 @@ Iter *LogReader::newIter() {
     return new Iterator(rf_);
 }
 
-LogReader *LogReader::newLogReader(uint64_t fileid) {
-    LogReader *lr = new LogReader(fileid);
+LogReader *LogReader::newLogReader(uint64_t file_id) {
+    LogReader *lr = new LogReader(file_id);
     if(lr->rf_ == nullptr) {
         delete lr;
         return nullptr;
@@ -68,6 +69,34 @@ LogReader *LogReader::newLogReader(uint64_t fileid) {
     return lr;
 }
 
-void LogReader::seek(const Handle &handle, string *value) {
+int LogReader::seek(const Handle &handle, string *data) {
+    assert(handle.file_id == file_id_);
+    rf_->read(handle.size, data, handle.offset);
+    if(data->size() < handle.size) {
+        data->clear();
+        return -1;
+    }
+    assert(handle.sequence == 
+        *reinterpret_cast<uint64_t *>(data->data() + 4));
+    if(Unmask(*reinterpret_cast<uint32_t *>(data->data()))
+        != Value(data->data() + 4, data->size() - 4)) {
+        data->clear();
+        return -1;
+    }
+    return 0;
+}
+
+HIndexReader *HIndexReader::newHIndexReader(uint64_t file_id) {
+    HIndexReader *hir = new HIndexReader(file_id);
+    if(hir->rf_ == nullptr) {
+        delete hir;
+        hir = nullptr;
+    }
+    return hir;
+}
+
+RandomReadFile *HIndexReader::examine() {
+    rf_->read(4, &data, 4);
+    size_t totalsize = *reinterpret_cast<uint32_t *>(data.data());
     
 }
