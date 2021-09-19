@@ -60,6 +60,7 @@ public:
             examine();
         }
     }
+    Iter *newIter();
 };
 
 #endif

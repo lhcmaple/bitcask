@@ -57,16 +57,66 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
     cur = lb->activelist_.prev;
     while(cur != &lb->activelist_) {
         uint64_t file_id = cur->file_id;
+        lb->cur_fileid_ = std::max(lb->cur_fileid_, file_id);
         HIndexReader *hir = HIndexReader::newHIndexReader(file_id);
         if(hir != nullptr) {
-            //.
+            Iter *it = hir->newIter();
+            for(; it->isValid(); it->next()) {
+                HIndexContent *hic = static_cast<HIndexContent *>(it->get());
+                lb->cur_sequence_ = std::max(lb->cur_sequence_, hic->sequence);
+                Handle handle;
+                handle.file_id = file_id;
+                handle.offset = hic->offset;
+                handle.sequence = hic->sequence;
+                handle.size = hic->size;
+                htable->insert(hic->key, handle);
+            }
+            delete it;
         } else {
             LogReader *lr = LogReader::newLogReader(file_id);
-            WriteFile *wf = Env::globalEnv()->newWriteFile(std::to_string(file_id) + ".hindex", true);
-            //
+            WriteFile *hwf = Env::globalEnv()->newWriteFile(std::to_string(file_id) + ".hindex");
+            string hash_index;
+            hash_index.resize(8);
+            Iter *it = lr->newIter();
+            uint32_t offset = 0;
+            for(; it->isValid(); it->next()) {
+                LogContent *lc = static_cast<LogContent *>(it->get());
+                lb->cur_sequence_ = std::max(lb->cur_sequence_, lc->sequence);
+                char *cur = hash_index.data() + hash_index.size();
+                hash_index.resize(hash_index.size() + 20 + lc->key.size());
+                *reinterpret_cast<uint64_t *>(cur) = lc->sequence;
+                *reinterpret_cast<uint32_t *>(cur + 8) = offset;
+                *reinterpret_cast<uint32_t *>(cur + 12) = lc->key.size() + lc->value.size() + 20;
+                *reinterpret_cast<uint32_t *>(cur + 16) = lc->key.size();
+                lc->key.copy(cur + 20, lc->key.size());
+
+                Handle handle;
+                handle.file_id = file_id;
+                handle.offset = offset;
+                handle.sequence = lc->sequence;
+                handle.size = lc->key.size() + lc->value.size() + 20;
+                htable->insert(lc->key, handle);
+                offset += lc->key.size() + lc->value.size() + 20;
+            }
+            *reinterpret_cast<uint32_t *>(hash_index.data() + 4) = hash_index.size();
+            *reinterpret_cast<uint32_t *>(hash_index.data()) = Mask(Value(hash_index.data() + 4, hash_index.size() - 4));
+            hwf->write(hash_index);
+            delete lr;
+            delete hwf;
+            delete it;
         }
+        delete hir;
         cur = cur->prev;
     }
+    lb->wf_ = Env::globalEnv()->newWriteFile(std::to_string(++lb->cur_fileid_) + ".log");
+    lb->file_size_ = 0;
+    fileNode *cur = new fileNode;
+    cur->file_id = lb->cur_fileid_;
+    cur->next = lb->activelist_.next;
+    cur->prev = &lb->activelist_;
+    lb->activelist_.next->prev = cur;
+    lb->activelist_.next = cur;
+    lb->hashindex_.resize(8);
     return lb;
 }
 
@@ -109,13 +159,13 @@ int LogBuilder::dump() {
     assert(activelist_.next != &activelist_);
 
     uint64_t fid = activelist_.next->file_id;
-    WriteFile *hwf = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".hindex", true);
+    WriteFile *hwf = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".hindex");
     if(hwf == nullptr) {
         return -1;
     }
     assert(hashindex_.size() >= 8);
-    *reinterpret_cast<uint32_t *>(hashindex_.data() + 4) = hashindex_.size() - 8;
-    *reinterpret_cast<uint32_t *>(hashindex_.data() + 4) = Mask(Value(hashindex_.data() + 4, hashindex_.size() - 4));
+    *reinterpret_cast<uint32_t *>(hashindex_.data() + 4) = hashindex_.size();
+    *reinterpret_cast<uint32_t *>(hashindex_.data()) = Mask(Value(hashindex_.data() + 4, hashindex_.size() - 4));
     if(hwf->write(hashindex_) != 0) {
         delete hwf;
         return -1;
@@ -129,7 +179,7 @@ int LogBuilder::dump() {
     fnode->prev = &activelist_;
     activelist_.next->prev = fnode;
     activelist_.next = fnode;
-    wf_ = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".log", true);
+    wf_ = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".log");
     hashindex_.resize(8);
 }
 

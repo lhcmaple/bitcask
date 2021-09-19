@@ -122,7 +122,7 @@ void HIndexReader::examine() {
         return;
     }
     size_t totalsize = *reinterpret_cast<uint32_t *>(data.data());
-    rf_->read(4, &data, totalsize);
+    rf_->read(totalsize, &data, 0);
     if(data.size() < totalsize) {
         delete rf_;
         rf_ = nullptr;
@@ -184,3 +184,7 @@ public:
         
     }
 };
+
+Iter *HIndexReader::newIter() {
+    return new HIndexReader::Iterator(data);
+}

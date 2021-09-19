@@ -36,6 +36,8 @@ public:
         activelist_.next = &activelist_;
         compactlist_.prev = &compactlist_;
         compactlist_.next = &compactlist_;
+        cur_fileid_ = 0;
+        cur_sequence_ = 0;
     }
     static LogBuilder *newLogBuilder(const string_view &db_name, HashTable *htable);
     int append(const string_view &key, const string_view &value, 
