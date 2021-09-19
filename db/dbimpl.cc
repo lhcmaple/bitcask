@@ -3,10 +3,15 @@
 #include "env.h"
 #include "logreader.h"
 
+#include <utility>
+
+using std::pair;
+
 class DBImpl::Iterator : public Iter {
 private:
     Iter *it_;
     string data_;
+    pair<string, string> kv;
 public:
     Iterator(DBImpl *impl) : it_(impl->ht_->newIter()) {
         
@@ -24,8 +29,12 @@ public:
         Node *cur = static_cast<Node *>(it_->get());
         LogReader *lr = LogReader::newLogReader(cur->handle.file_id);
         assert(lr != nullptr);
-        assert(lr->seek(cur->handle, &data_) >= 0);
-        return data_.data();
+        LogContent *lc = lr->seek(cur->handle);
+        assert(lc != nullptr);
+        kv.first.swap(lc->key);
+        kv.second.swap(lc->value);
+        delete lc;
+        return &kv;
     }
     ~Iterator() override {
 
@@ -37,14 +46,14 @@ int DBImpl::put(const string_view &key, const string_view &value) {
         return -1;
     }
     Handle handle;
-    GUARD {
+    GUARD_BEGIN(mutex_)
         Lock lock(mutex_);
         if(lb_->append(key, value, &handle) != 0) {
             error = true;
             return -1;
         }
         ht_->insert(key, handle);
-    }
+    GUARD_END
     return 0;
 }
 
@@ -61,10 +70,13 @@ int DBImpl::get(const string_view &key, string *value) {
     }
     LogReader *lr = LogReader::newLogReader(cur->handle.file_id);
     assert(lr == nullptr);
-    if(lr->seek(cur->handle, value) != 0) {
+    LogContent *lc = lr->seek(cur->handle);
+    if(lc == nullptr) {
         error = true;
         return -1;
     }
+    value->swap(lc->value);
+    delete lc;
     return 0;
 }
 
@@ -94,7 +106,14 @@ void *DBImpl::compactThread(void *arg) {
         Iter *it = lr->newIter();
         it->seekToFirst();
         for(; it->isValid(); it->next()) {
-            //
+            LogContent *lc = static_cast<LogContent *>(it->get());
+            GUARD_BEGIN(impl->mutex_)
+            const Node *node = impl->ht_->find(lc->key);
+            if(node == nullptr || node->handle.sequence > lc->sequence) {
+                continue;
+            }
+            impl->put(lc->key, lc->value);
+            GUARD_END
         }
         delete lr;
         Env::globalEnv()->rmFile(std::to_string(fn->file_id) + ".log");
@@ -109,13 +128,13 @@ int DBImpl::compact(bool background = true) {
     if(error) {
         return -1;
     }
-    GUARD {
+    GUARD_BEGIN(mutex_)
         Lock lock(mutex_);
         if(iscompacting_ == true) {
             return -1;
         }
         iscompacting_ = true;
-    }
+    GUARD_END
     Info info;
     info.impl = this;
     info.background = background;

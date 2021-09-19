@@ -10,10 +10,25 @@
 
 using std::string;
 
+struct LogContent {
+    uint32_t crc;
+    uint64_t sequence;
+    string key;
+    string value;
+};
+
+struct HIndexContent {
+    uint64_t sequence;
+    uint32_t offset;
+    uint32_t size;
+    string key;
+};
+
 class LogReader {
 private:
     uint64_t file_id_;
     RandomReadFile *rf_;
+    string data_;
 
     class Iterator;
 public:
@@ -21,7 +36,7 @@ public:
     LogReader(uint64_t file_id) : file_id_(file_id) {
         rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(file_id_) + ".log");
     }
-    int seek(const Handle &handle, string *data);
+    LogContent *seek(const Handle &handle);
     ~LogReader() {
         delete rf_;
     }

@@ -11,11 +11,9 @@ class posixMutex;
 
 class posixEnv : public Env {
 public:
-    WriteFile *newWriteFile(const string_view &fname, bool iscreat = false) override;
+    WriteFile *newWriteFile(const string_view &fname) override;
     RandomReadFile *newRandomReadFile(const string_view &fname) override;
-    Mutex *newMutex() override {
-        return new posixMutex;
-    }
+    Mutex *newMutex() override;
     int newThread(FunctionHandle func, void *arg) override;
     int readDir(const string_view &dir_name, vector<string> *files) override;
 };
@@ -43,13 +41,13 @@ class posixWriteFile : public WriteFile {
 private:
     int fd;
 public:
-    posixWriteFile(const string_view &fname, bool iscreat);
+    posixWriteFile(const string_view &fname);
     ssize_t write(const string_view &data) override;
     int flush() override;
     ~posixWriteFile() override;
 
-    static posixWriteFile *newposixWriteFile(const string_view &fname, bool iscreat) {
-        posixWriteFile *pwf = new posixWriteFile(fname, iscreat);
+    static posixWriteFile *newposixWriteFile(const string_view &fname) {
+        posixWriteFile *pwf = new posixWriteFile(fname);
         if(pwf->fd < 0) {
             delete pwf;
             return nullptr;
@@ -58,12 +56,8 @@ public:
     }
 };
 
-posixWriteFile::posixWriteFile(const string_view &fname, bool iscreat) {
-    int O_FLAG = O_WRONLY | O_APPEND;
-    if(iscreat) {
-        O_FLAG |= O_CREAT | O_TRUNC;
-    }
-    fd = open(fname.data(), O_FLAG, S_IRWXU);
+posixWriteFile::posixWriteFile(const string_view &fname) {
+    fd = open(fname.data(), O_WRONLY | O_APPEND | O_CREAT | O_TRUNC, S_IRWXU);
 }
 
 posixWriteFile::~posixWriteFile() {
@@ -84,7 +78,6 @@ private:
 public:
     posixRandomReadFile(const string_view &fname);
     ssize_t read(size_t size, string *data, int offset) override;
-    ssize_t read(size_t size, string *data) override;
     ~posixRandomReadFile() override;
 
     static posixRandomReadFile *newposixRandomReadFile(const string_view &fname) {
@@ -107,13 +100,6 @@ posixRandomReadFile::~posixRandomReadFile() {
 
 ssize_t posixRandomReadFile::read(size_t size, string *data, int offset) {
     lseek(fd, offset, SEEK_SET);
-    if(size == 0) {
-        return 0;
-    }
-    return read(size, data);
-}
-
-ssize_t posixRandomReadFile::read(size_t size, string *data) {
     assert(data != nullptr);
     data->clear();
     data->resize(size);
@@ -146,14 +132,19 @@ public:
     }
 };
 
-inline WriteFile *posixEnv::newWriteFile(const string_view &fname, bool iscreat) {
-    return posixWriteFile::newposixWriteFile(fname, iscreat);
+inline WriteFile *posixEnv::newWriteFile(const string_view &fname) {
+    return posixWriteFile::newposixWriteFile(fname);
 }
+
 inline RandomReadFile *posixEnv::newRandomReadFile(const string_view &fname) {
     return posixRandomReadFile::newposixRandomReadFile(fname);
 }
 
-inline Env *Env::globalEnv() {
+inline Mutex *posixEnv::newMutex() {
+    return new posixMutex();
+}
+
+Env *Env::globalEnv() {
     static posixEnv env;
     return &env;
 }

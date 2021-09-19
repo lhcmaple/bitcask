@@ -24,6 +24,12 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
         return nullptr;
     }
     std::sort(files.begin(), files.end(), [](string &s1, string &s2) {
+        if(s1 == "." || s1 == "..") {
+            return true;
+        }
+        if(s2 == "." || s2 == "..") {
+            return false;
+        }
         uint64_t id1 = std::stoull(s1), id2 = std::stoull(s2);
         if(id1 != id2) {
             return id1 < id2;
@@ -53,7 +59,7 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
         uint64_t file_id = cur->file_id;
         HIndexReader *hir = HIndexReader::newHIndexReader(file_id);
         if(hir != nullptr) {
-            //
+            //.
         } else {
             LogReader *lr = LogReader::newLogReader(file_id);
             WriteFile *wf = Env::globalEnv()->newWriteFile(std::to_string(file_id) + ".hindex", true);

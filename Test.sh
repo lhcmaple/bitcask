@@ -29,11 +29,10 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17 -lpthread"
 # echo
 
 # env_test
-# echo "-----test env-----"
-# g++ $CPPFLAG -o .Test/env_test util/env_test.cc util/env_posix.cc
-# ./.Test/env_test
-# rm .Test/env_file
-# echo "-----env tested-----"
+echo "-----test env-----"
+g++ -o .Test/env_test util/env_test.cc util/env_posix.cc $CPPFLAG
+./.Test/env_test
+echo "-----env tested-----"
 
 # echo
 
@@ -43,24 +42,25 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17 -lpthread"
 # ./.Test/crc32c_test
 # echo "-----crc32c tested-----"
 
-function countline {
-    totalline=0
-    for name in `ls`
-    do
-        if [ -d $name ] 
-        then
-            cd $name
-            line=`countline $name`
-            totalline=$((totalline + line))
-            cd ..
-        fi
-    done
-    for name in `ls | grep -E "(cc$)|(h$)"`
-    do
-        line=`wc -l $name | awk '{print $1}'`
-        totalline=$((totalline + line))
-    done
-    echo $totalline
-}
+# function countline {
+#     totalline=0
+#     for name in `ls`
+#     do
+#         if [ -d $name ] 
+#         then
+#             cd $name
+#             line=`countline $name`
+#             totalline=$((totalline + line))
+#             cd ..
+#         fi
+#     done
+#     for name in `ls | grep -E "(cc$)|(h$)"`
+#     do
+#         line=`wc -l $name | awk '{print $1}'`
+#         wc -l $name >&2
+#         totalline=$((totalline + line))
+#     done
+#     echo $totalline
+# }
 
-countline
+# countline

@@ -5,10 +5,6 @@
 #include "logbuilder.h"
 #include "hashtable.h"
 
-#include <atomic>
-
-using std::atomic;
-
 class DBImpl : public DB {
 private:
     LogBuilder *lb_;

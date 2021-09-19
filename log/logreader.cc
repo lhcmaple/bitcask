@@ -14,19 +14,25 @@ private:
     ssize_t off_next_;
     string header_cur_;
     string data_cur_;
+    LogContent lc_;
+
 public:
     Iterator(RandomReadFile *rf) : rf_(rf) {
         off_cur_ = -1;
     }
+
     bool isValid() override {
         return off_cur_ >= 0;
     }
+
     void seekToFirst() override {
         off_cur_ = 0;
         off_next_ = 0;
         next();
     }
+
     void next() override {
+        assert(isValid());
         off_cur_ = off_next_;
         rf_->read(20, &header_cur_, off_cur_);
         if(header_cur_.size() < 20) {
@@ -47,10 +53,17 @@ public:
             off_cur_ = -1;
             return;
         }
+        lc_.sequence = sequence;
+        lc_.crc = crc;
+        lc_.key.assign(data_cur_.data() + 20);
+        lc_.value.assign(data_cur_.data() + 20 + key_length, value_length);
     }
+
     void *get() override {
-        return data_cur_.data();
+        assert(isValid());
+        return &lc_;
     }
+
     ~Iterator() override {
 
     }
@@ -69,21 +82,26 @@ LogReader *LogReader::newLogReader(uint64_t file_id) {
     return lr;
 }
 
-int LogReader::seek(const Handle &handle, string *data) {
+LogContent *LogReader::seek(const Handle &handle) {
     assert(handle.file_id == file_id_);
-    rf_->read(handle.size, data, handle.offset);
-    if(data->size() < handle.size) {
-        data->clear();
-        return -1;
+    rf_->read(handle.size, &data_, handle.offset);
+    if(data_.size() < handle.size) {
+        data_.clear();
+        return nullptr;
     }
-    assert(handle.sequence == 
-        *reinterpret_cast<uint64_t *>(data->data() + 4));
-    if(Unmask(*reinterpret_cast<uint32_t *>(data->data()))
-        != Value(data->data() + 4, data->size() - 4)) {
-        data->clear();
-        return -1;
+    uint32_t crc = Value(data_.data() + 4, data_.size() - 4);
+    if(Unmask(*reinterpret_cast<uint32_t *>(data_.data())) != crc) {
+        data_.clear();
+        return nullptr;
     }
-    return 0;
+    uint32_t key_length = *reinterpret_cast<uint32_t *>(data_.data() + 12);
+    uint32_t value_length = *reinterpret_cast<uint32_t *>(data_.data() + 16);
+    LogContent *lc = new LogContent;
+    lc->sequence = *reinterpret_cast<uint64_t *>(data_.data() + 4);
+    lc->crc = crc;
+    lc->key.assign(data_.data() + 20);
+    lc->value.assign(data_.data() + 20 + key_length, value_length);    
+    return lc;
 }
 
 HIndexReader *HIndexReader::newHIndexReader(uint64_t file_id) {
@@ -125,30 +143,43 @@ private:
     string_view data_;
     ssize_t cur_off_;
     ssize_t next_off_;
+    HIndexContent hic_;
+
 public:
     Iterator(const string_view &data) : data_(data) {
         cur_off_ = -1;
     }
+
     bool isValid() override {
         return cur_off_ >= 0;
     }
+
     void seekToFirst() override {
         cur_off_ = 8;
         next_off_ = 8;
         next();
     }
+
     void next() override {
+        assert(isValid());
         cur_off_ = next_off_;
         if(cur_off_ >= data_.size()) {
             cur_off_ = -1;
             return;
         }
         size_t key_length = *reinterpret_cast<const uint32_t *>(data_.data() + cur_off_ + 16);
+        hic_.key.assign(data_.data() + cur_off_ + 20, key_length);
+        hic_.offset = *reinterpret_cast<const uint32_t *>(data_.data() + cur_off_ + 8);
+        hic_.size = *reinterpret_cast<const uint32_t *>(data_.data() + cur_off_ + 12);
+        hic_.sequence = *reinterpret_cast<const uint64_t *>(data_.data() + cur_off_);
         next_off_ = cur_off_ + 8 + 4 + 4 + 4 + key_length;
     }
+
     void *get() {
-        return const_cast<char *>(data_.data() + cur_off_);
+        assert(isValid());
+        return &hic_;
     }
+
     ~Iterator() {
         
     }
