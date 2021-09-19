@@ -4,7 +4,12 @@
 
 LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *htable) {
     LogBuilder *lb = new LogBuilder;
-    // 读取文件
+    vector<string> files;
+    if(Env::globalEnv()->readDir(db_name, &files) < 0) {
+        delete lb;
+        return nullptr;
+    }
+    
     return lb;
 }
 
@@ -69,6 +74,35 @@ int LogBuilder::dump() {
     activelist_.next = fnode;
     wf_ = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".log", true);
     hashindex_.resize(8);
+}
+
+void LogBuilder::compaction() {
+    assert(activelist_.next != &activelist_);
+    fileNode *head = activelist_.next, *tail = activelist_.prev;
+    compactlist_.next = head;
+    head->prev = &compactlist_;
+    compactlist_.prev = tail;
+    tail->prev = &compactlist_;
+    
+    fileNode *cur = compactlist_.next;
+    cur->next->prev = &compactlist_;
+    compactlist_.next = cur->next;
+    cur->next = &activelist_;
+    cur->prev = &activelist_;
+    activelist_.next = cur;
+    activelist_.prev = cur;
+}
+
+fileNode *LogBuilder::compactFile() {
+    if(compactlist_.prev == &compactlist_) {
+        return nullptr;
+    }
+    fileNode *older = compactlist_.prev, *newer = older->prev;
+    newer->next = &compactlist_;
+    compactlist_.prev = newer;
+    older->prev = nullptr;
+    older->next = nullptr;
+    return older;
 }
 
 LogBuilder::~LogBuilder() {

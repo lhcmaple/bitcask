@@ -40,7 +40,8 @@ public:
     static LogBuilder *newLogBuilder(const string_view &db_name, HashTable *htable);
     int append(const string_view &key, const string_view &value, 
         Handle *handle);
-    int compact(bool background = true); //
+    void compaction();
+    fileNode *compactFile(); //
     ~LogBuilder();
 };
 

@@ -1,27 +1,35 @@
 #include "dbimpl.h"
 #include "iter.h"
 #include "env.h"
+#include "logreader.h"
 
 class DBImpl::Iterator : public Iter {
 private:
-    DBImpl *impl_;
+    Iter *it_;
+    string data_;
 public:
-    Iterator(DBImpl *impl) : impl_(impl) {
-        //
+    Iterator(DBImpl *impl) : it_(impl->ht_->newIter()) {
+        
     }
     bool isValid() override {
-        //
+        return it_->isValid();
     }
     void seekToFirst() override {
-        //
+        it_->seekToFirst();
     }
     void next() override {
-        //
+        it_->next();
     }
     void *get() override {
-        //
+        Node *cur = static_cast<Node *>(it_->get());
+        LogReader *lr = LogReader::newLogReader(cur->handle.file_id);
+        assert(lr != nullptr);
+        assert(lr->seek(cur->handle, &data_) >= 0);
+        return data_.data();
     }
-    ~Iterator() override {}
+    ~Iterator() override {
+
+    }
 };
 
 int DBImpl::put(const string_view &key, const string_view &value) {
@@ -51,7 +59,13 @@ int DBImpl::get(const string_view &key, string *value) {
     if(cur == nullptr) {
         return -1;
     }
-    //
+    LogReader *lr = LogReader::newLogReader(cur->handle.file_id);
+    assert(lr == nullptr);
+    if(lr->seek(cur->handle, value) != 0) {
+        error = true;
+        return -1;
+    }
+    return 0;
 }
 
 int DBImpl::del(const string_view &key) {

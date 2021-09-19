@@ -34,15 +34,15 @@ private:
     RandomReadFile *rf_;
     string data;
 
-    class Iterator;
+    void examine();
 
-    RandomReadFile *examine();
+    class Iterator;
 public:
     static HIndexReader *newHIndexReader(uint64_t file_id);
     HIndexReader(uint64_t file_id) : file_id_(file_id) {
         rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(file_id_) + ".hindex");
         if(rf_ != nullptr) { //校验索引完整性
-            rf_ = examine();
+            examine();
         }
     }
 };
