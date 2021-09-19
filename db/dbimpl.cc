@@ -81,7 +81,27 @@ void *DBImpl::compactThread(void *arg) {
     Info *pinfo = static_cast<Info *>(arg);
     DBImpl *impl = pinfo->impl;
     bool background = pinfo->background;
-    //
+    if(background) {
+        Lock lock(impl->mutex_);
+        impl->lb_->compaction();
+    } else {
+        impl->lb_->compaction();
+    }
+    fileNode *fn = nullptr;
+    while(fn = impl->lb_->compactFile()) {
+        LogReader *lr = LogReader::newLogReader(fn->file_id);
+        assert(lr != nullptr);
+        Iter *it = lr->newIter();
+        it->seekToFirst();
+        for(; it->isValid(); it->next()) {
+            //
+        }
+        delete lr;
+        Env::globalEnv()->rmFile(std::to_string(fn->file_id) + ".log");
+        Env::globalEnv()->rmFile(std::to_string(fn->file_id) + ".hindex");
+        delete fn;
+    }
+    impl->iscompacting_ = false;
     return 0;
 }
 
@@ -89,10 +109,13 @@ int DBImpl::compact(bool background = true) {
     if(error) {
         return -1;
     }
-    if(iscompacting_.load() == true) {
-        return 0;
+    GUARD {
+        Lock lock(mutex_);
+        if(iscompacting_ == true) {
+            return -1;
+        }
+        iscompacting_ = true;
     }
-    iscompacting_.store(true);
     Info info;
     info.impl = this;
     info.background = background;

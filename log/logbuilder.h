@@ -41,7 +41,7 @@ public:
     int append(const string_view &key, const string_view &value, 
         Handle *handle);
     void compaction();
-    fileNode *compactFile(); //
+    fileNode *compactFile();
     ~LogBuilder();
 };
 

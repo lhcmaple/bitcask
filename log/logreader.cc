@@ -100,6 +100,7 @@ void HIndexReader::examine() {
     if(data.size() < 4) {
         delete rf_;
         rf_ = nullptr;
+        Env::globalEnv()->rmFile(std::to_string(file_id_) + ".hindex");
         return;
     }
     size_t totalsize = *reinterpret_cast<uint32_t *>(data.data());
@@ -107,12 +108,14 @@ void HIndexReader::examine() {
     if(data.size() < totalsize) {
         delete rf_;
         rf_ = nullptr;
+        Env::globalEnv()->rmFile(std::to_string(file_id_) + ".hindex");
         return;
     }
     if(Unmask(*reinterpret_cast<uint32_t *>(data.data())) != 
         Value(data.data() + 4, data.size() - 4)) {
         delete rf_;
         rf_ = nullptr;
+        Env::globalEnv()->rmFile(std::to_string(file_id_) + ".hindex");
         return;
     }
 }

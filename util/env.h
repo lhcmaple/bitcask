@@ -6,6 +6,7 @@
 #include <cassert>
 #include <vector>
 #include <utility>
+#include <cstdio>
 
 using std::string_view;
 using std::string;
@@ -26,6 +27,10 @@ public:
     virtual Mutex *newMutex();
     virtual int newThread(FunctionHandle func, void *arg) = 0;
     virtual int readDir(const string_view &dir_name, vector<string> *files) = 0;
+    int rmFile(const string_view &fname) {
+        return remove(fname.data());
+    }
+
     static Env *globalEnv();
 };
 

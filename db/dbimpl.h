@@ -15,7 +15,7 @@ private:
     HashTable *ht_;
     Mutex *mutex_;
     bool error;
-    atomic<bool> iscompacting_;
+    bool iscompacting_;
 
     static void *compactThread(void *arg);
 public:

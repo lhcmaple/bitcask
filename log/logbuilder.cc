@@ -1,6 +1,20 @@
 #include "logbuilder.h"
 #include "crc32c.h"
 #include "hashtable.h"
+#include "logreader.h"
+
+#include <algorithm>
+#include <unordered_set>
+
+using std::unordered_set;
+
+bool isLog(const string_view &file) {
+    return file.size() >= 5 && file.substr(file.size() - 4, 4) == ".log";
+}
+
+bool isHIndex(const string_view &file) {
+    return file.size() >= 8 && file.substr(file.size() - 8, 7) == ".hindex";
+}
 
 LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *htable) {
     LogBuilder *lb = new LogBuilder;
@@ -9,7 +23,44 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
         delete lb;
         return nullptr;
     }
-    
+    std::sort(files.begin(), files.end(), [](string &s1, string &s2) {
+        uint64_t id1 = std::stoull(s1), id2 = std::stoull(s2);
+        if(id1 != id2) {
+            return id1 < id2;
+        }
+        return isLog(s1);
+    });
+    fileNode *cur = &lb->activelist_;
+    unordered_set<uint64_t> log_set;
+    for(auto &f : files) {
+        if(isLog(f)) {
+            fileNode *fnode = new fileNode;
+            fnode->file_id = std::stoull(f);
+            fnode->next = cur->next;
+            fnode->prev = cur;
+            cur->next->prev = fnode;
+            cur->next = fnode;
+            log_set.insert(fnode->file_id);
+        } else if(isHIndex(f)) {
+            uint64_t id = std::stoull(f);
+            if(log_set.count(id) == 0) {
+                Env::globalEnv()->rmFile(f);
+            }
+        }
+    }
+    cur = lb->activelist_.prev;
+    while(cur != &lb->activelist_) {
+        uint64_t file_id = cur->file_id;
+        HIndexReader *hir = HIndexReader::newHIndexReader(file_id);
+        if(hir != nullptr) {
+            //
+        } else {
+            LogReader *lr = LogReader::newLogReader(file_id);
+            WriteFile *wf = Env::globalEnv()->newWriteFile(std::to_string(file_id) + ".hindex", true);
+            //
+        }
+        cur = cur->prev;
+    }
     return lb;
 }
 
