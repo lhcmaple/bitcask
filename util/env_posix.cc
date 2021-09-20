@@ -14,9 +14,14 @@ public:
     WriteFile *newWriteFile(const string_view &fname) override;
     RandomReadFile *newRandomReadFile(const string_view &fname) override;
     Mutex *newMutex() override;
-    int newThread(FunctionHandle func, void *arg) override;
+    int newThread(FunctionHandle func, void *arg, uint64_t *id) override;
+    int joinThread(uint64_t id) override;
     int readDir(const string_view &dir_name, vector<string> *files) override;
 };
+
+int posixEnv::joinThread(uint64_t id) {
+    return pthread_join(static_cast<pthread_t>(id), nullptr);
+}
 
 int posixEnv::readDir(const string_view &dir_name, vector<string> *files) {
     files->clear();
@@ -32,9 +37,8 @@ int posixEnv::readDir(const string_view &dir_name, vector<string> *files) {
     return 0;
 }
 
-int posixEnv::newThread(FunctionHandle func, void *arg) {
-    pthread_t pid;
-    return pthread_create(&pid, nullptr, func, arg);
+int posixEnv::newThread(FunctionHandle func, void *arg, uint64_t *id) {
+    return pthread_create(static_cast<pthread_t *>(id), nullptr, func, arg);
 }
 
 class posixWriteFile : public WriteFile {
@@ -61,7 +65,9 @@ posixWriteFile::posixWriteFile(const string_view &fname) {
 }
 
 posixWriteFile::~posixWriteFile() {
-    close(fd);
+    if(fd >= 0) {
+        close(fd);
+    }
 }
 
 ssize_t posixWriteFile::write(const string_view &data) {
@@ -95,7 +101,9 @@ posixRandomReadFile::posixRandomReadFile(const string_view &fname) {
 }
 
 posixRandomReadFile::~posixRandomReadFile() {
-    close(fd);
+    if(fd >= 0) {
+        close(fd);
+    }
 }
 
 ssize_t posixRandomReadFile::read(size_t size, string *data, int offset) {

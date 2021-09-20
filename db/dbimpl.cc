@@ -35,10 +35,11 @@ public:
         kv.first.swap(lc->key);
         kv.second.swap(lc->value);
         delete lc;
+        delete lr;
         return &kv;
     }
     ~Iterator() override {
-
+        delete it_;
     }
 };
 
@@ -70,20 +71,32 @@ int DBImpl::get(const string_view &key, string *value) {
             return -1;
         }
         LogReader *lr = LogReader::newLogReader(cur->handle.file_id, db_name_);
-        assert(lr == nullptr);
+        assert(lr != nullptr);
         LogContent *lc = lr->seek(cur->handle);
         if(lc == nullptr) {
             error = true;
             return -1;
         }
         value->swap(lc->value);
+        delete lr;
     delete lc;
     GUARD_END
     return 0;
 }
 
 int DBImpl::del(const string_view &key) {
-    return put(key, "");
+    if(error) {
+        return -1;
+    }
+    Handle handle;
+    GUARD_BEGIN(mutex_)
+        if(lb_->append(key, "", &handle) != 0) {
+            error = true;
+            return -1;
+        }
+        ht_->erase(key);
+    GUARD_END
+    return 0;
 }
 
 struct Info {
@@ -95,12 +108,10 @@ void *DBImpl::compactThread(void *arg) {
     Info *pinfo = static_cast<Info *>(arg);
     DBImpl *impl = pinfo->impl;
     bool background = pinfo->background;
-    if(background) {
-        Lock lock(impl->mutex_);
+    delete pinfo;
+    GUARD_BEGIN(impl->mutex_)
         impl->lb_->compaction();
-    } else {
-        impl->lb_->compaction();
-    }
+    GUARD_END
     fileNode *fn = nullptr;
     while(fn = impl->lb_->compactFile()) {
         LogReader *lr = LogReader::newLogReader(fn->file_id, impl->db_name_);
@@ -131,17 +142,16 @@ int DBImpl::compact(bool background) {
         return -1;
     }
     GUARD_BEGIN(mutex_)
-        Lock lock(mutex_);
         if(iscompacting_ == true) {
             return -1;
         }
         iscompacting_ = true;
     GUARD_END
-    Info info;
-    info.impl = this;
-    info.background = background;
+    Info *info = new Info;
+    info->impl = this;
+    info->background = background;
     if(background) {
-        return Env::globalEnv()->newThread(DBImpl::compactThread, &info);
+        return Env::globalEnv()->newThread(DBImpl::compactThread, info, &pid);
     } else {
         return reinterpret_cast<long long>(DBImpl::compactThread(&info));
     }

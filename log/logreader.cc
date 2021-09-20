@@ -55,7 +55,7 @@ public:
         }
         lc_.sequence = sequence;
         lc_.crc = crc;
-        lc_.key.assign(data_cur_.data() + 20);
+        lc_.key.assign(data_cur_.data() + 20, key_length);
         lc_.value.assign(data_cur_.data() + 20 + key_length, value_length);
     }
 
@@ -99,7 +99,7 @@ LogContent *LogReader::seek(const Handle &handle) {
     LogContent *lc = new LogContent;
     lc->sequence = *reinterpret_cast<uint64_t *>(data_.data() + 4);
     lc->crc = crc;
-    lc->key.assign(data_.data() + 20);
+    lc->key.assign(data_.data() + 20, key_length);
     lc->value.assign(data_.data() + 20 + key_length, value_length);    
     return lc;
 }
@@ -118,7 +118,7 @@ void HIndexReader::examine() {
     if(data.size() < 4) {
         delete rf_;
         rf_ = nullptr;
-        Env::globalEnv()->rmFile(std::to_string(file_id_) + ".hindex");
+        Env::globalEnv()->rmFile(db_name_ + "/" + std::to_string(file_id_) + ".hindex");
         return;
     }
     size_t totalsize = *reinterpret_cast<uint32_t *>(data.data());
@@ -126,14 +126,14 @@ void HIndexReader::examine() {
     if(data.size() < totalsize) {
         delete rf_;
         rf_ = nullptr;
-        Env::globalEnv()->rmFile(std::to_string(file_id_) + ".hindex");
+        Env::globalEnv()->rmFile(db_name_ + "/" + std::to_string(file_id_) + ".hindex");
         return;
     }
     if(Unmask(*reinterpret_cast<uint32_t *>(data.data())) != 
         Value(data.data() + 4, data.size() - 4)) {
         delete rf_;
         rf_ = nullptr;
-        Env::globalEnv()->rmFile(std::to_string(file_id_) + ".hindex");
+        Env::globalEnv()->rmFile(db_name_ + "/" + std::to_string(file_id_) + ".hindex");
         return;
     }
 }

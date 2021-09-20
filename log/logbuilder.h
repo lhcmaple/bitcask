@@ -29,7 +29,7 @@ private:
     uint64_t cur_fileid_;
     uint64_t cur_sequence_;
 
-    int dump();
+    int dump(bool isexit);
 public:
     LogBuilder(const string_view &db_name) : db_name_(db_name) {
         activelist_.prev = &activelist_;

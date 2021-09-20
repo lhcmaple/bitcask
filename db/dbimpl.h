@@ -13,6 +13,7 @@ private:
     string db_name_;
     bool error;
     bool iscompacting_;
+    uint64_t pid;
 
     static void *compactThread(void *arg);
 public:
@@ -25,6 +26,9 @@ public:
         lb_ = LogBuilder::newLogBuilder(db_name_, ht_);
     }
     ~DBImpl() {
+        if(iscompacting_) {
+            Env::globalEnv()->joinThread(pid);
+        }
         delete ht_;
         delete lb_;
         delete mutex_;

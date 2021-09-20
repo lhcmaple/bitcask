@@ -63,6 +63,9 @@ public:
         }
     }
     Iter *newIter();
+    ~HIndexReader() {
+        delete rf_;
+    }
 };
 
 #endif

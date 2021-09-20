@@ -23,7 +23,8 @@ public:
     virtual WriteFile *newWriteFile(const string_view &fname) = 0;
     virtual RandomReadFile *newRandomReadFile(const string_view &fname) = 0;
     virtual Mutex *newMutex() = 0;
-    virtual int newThread(FunctionHandle func, void *arg) = 0;
+    virtual int newThread(FunctionHandle func, void *arg, uint64_t *id) = 0;
+    virtual int joinThread(uint64_t id) = 0;
     virtual int readDir(const string_view &dir_name, vector<string> *files) = 0;
     int rmFile(const string_view &fname) {
         return remove(fname.data());
