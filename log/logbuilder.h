@@ -19,6 +19,7 @@ struct fileNode {
 
 class LogBuilder {
 private:
+    string db_name_;
     fileNode activelist_;
     fileNode compactlist_; // empty list unless being compacted
     WriteFile *wf_;
@@ -28,10 +29,9 @@ private:
     uint64_t cur_fileid_;
     uint64_t cur_sequence_;
 
-    int write(const string_view &data);
     int dump();
 public:
-    LogBuilder() {
+    LogBuilder(const string_view &db_name) : db_name_(db_name) {
         activelist_.prev = &activelist_;
         activelist_.next = &activelist_;
         compactlist_.prev = &compactlist_;

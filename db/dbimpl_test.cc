@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "hashtable.h"
+#include "db.h"
 
 using namespace std;
 
@@ -10,12 +10,12 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
     // performance and correctness
-    vector<pair<string, uint64_t>> kv(N);
+    vector<pair<string, string>> kv(N);
     for(int i = 0; i < N; i++) {
-        kv[i] = {to_string(i + 1'000'000'000), i};
+        kv[i] = {to_string(i + 1'000'000'000), to_string(i + 1'000'000'000)};
     }
-    unordered_map<string, uint64_t> base;
-    HashTable ht;
+    unordered_map<string, string> base;
+    DB *db = DB::open(argv[1]);
     clock_t t_base, t_ht, dt_base = 0, dt_ht = 0;
 
     t_base = clock();
@@ -24,10 +24,8 @@ int main(int argc, char *argv[]) {
     }
     dt_base += clock() - t_base;
     t_ht = clock();
-    Handle handle;
     for(int i = 0; i < N; i++) {
-        handle.sequence = kv[i].second;
-        ht.insert(kv[i].first, handle);
+        db->put(kv[i].first, kv[i].second);
     }
     dt_ht += clock() - t_ht;
 
@@ -38,12 +36,12 @@ int main(int argc, char *argv[]) {
     dt_base += clock() - t_base;
     t_ht = clock();
     for(int i = 0; i < N; i += 2) {
-        ht.erase(kv[i].first);
+        db->del(kv[i].first);
     }
     dt_ht += clock() - t_ht;
 
     vector<bool> owned1(N, true), owned2(N, true);
-    vector<uint64_t> value1(N, 0), value2(N, 0);
+    vector<string> value1(N, 0), value2(N, 0);
 
     t_base = clock();
     for(int i = 0; i < N; i++) {
@@ -56,24 +54,21 @@ int main(int argc, char *argv[]) {
     dt_base += clock() - t_base;
     t_ht = clock();
     for(int i = 0; i < N; i++) {
-        const Node *cur = ht.find(kv[i].first);
-        if(cur == nullptr) {
+        if(db->get(kv[i].first, &value2[i]) < 0) {
             owned2[i] = false;
-        } else {
-            value2[i] = cur->handle.sequence;
         }
     }
     dt_ht += clock() - t_ht;
-    Iter *iter = ht.newIter();
+    Iter *iter = db->newIter();
     iter->seekToFirst();
     bool isequal = true;
     while(iter->isValid()) {
-        Node *node = static_cast<Node *>(iter->get());
-        if(base.count(string(node->key, node->key_length)) == 0 || base[string(node->key, node->key_length)] != node->handle.sequence) {
+        pair<string, string> *kv = static_cast<pair<string, string> *>(iter->get());
+        if(base.count(kv->first) == 0 || base[kv->first] != kv->second) {
             isequal = false;
             break;
         }
-        base.erase(string(node->key, node->key_length));
+        base.erase(kv->first);
         iter->next();
     }
     const char *logic[2] = {"false", "true"};

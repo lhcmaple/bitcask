@@ -10,6 +10,7 @@ private:
     LogBuilder *lb_;
     HashTable *ht_;
     Mutex *mutex_;
+    string db_name_;
     bool error;
     bool iscompacting_;
 
@@ -17,11 +18,11 @@ private:
 public:
     class Iterator;
 
-    DBImpl(const string_view &db_name) : error(false) {
+    DBImpl(const string_view &db_name) : error(false), db_name_(db_name) {
         iscompacting_ = false;
         mutex_ = Env::globalEnv()->newMutex();
         ht_ = new HashTable();
-        lb_ = LogBuilder::newLogBuilder(db_name, ht_);
+        lb_ = LogBuilder::newLogBuilder(db_name_, ht_);
     }
     ~DBImpl() {
         delete ht_;

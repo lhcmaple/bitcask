@@ -17,13 +17,16 @@ bool isHIndex(const string_view &file) {
 }
 
 LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *htable) {
-    LogBuilder *lb = new LogBuilder;
+    LogBuilder *lb = new LogBuilder(db_name);
     vector<string> files;
     if(Env::globalEnv()->readDir(db_name, &files) < 0) {
         delete lb;
         return nullptr;
     }
     std::sort(files.begin(), files.end(), [](string &s1, string &s2) {
+        if((s1 == "." || s1 == "..") && (s2 == "." || s2 == "..")) {
+            return s1 < s2;
+        }
         if(s1 == "." || s1 == "..") {
             return true;
         }
@@ -58,7 +61,7 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
     while(cur != &lb->activelist_) {
         uint64_t file_id = cur->file_id;
         lb->cur_fileid_ = std::max(lb->cur_fileid_, file_id);
-        HIndexReader *hir = HIndexReader::newHIndexReader(file_id);
+        HIndexReader *hir = HIndexReader::newHIndexReader(file_id, lb->db_name_);
         if(hir != nullptr) {
             Iter *it = hir->newIter();
             for(; it->isValid(); it->next()) {
@@ -73,8 +76,8 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
             }
             delete it;
         } else {
-            LogReader *lr = LogReader::newLogReader(file_id);
-            WriteFile *hwf = Env::globalEnv()->newWriteFile(std::to_string(file_id) + ".hindex");
+            LogReader *lr = LogReader::newLogReader(file_id, lb->db_name_);
+            WriteFile *hwf = Env::globalEnv()->newWriteFile(lb->db_name_ + "/" + std::to_string(file_id) + ".hindex");
             string hash_index;
             hash_index.resize(8);
             Iter *it = lr->newIter();
@@ -108,9 +111,9 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
         delete hir;
         cur = cur->prev;
     }
-    lb->wf_ = Env::globalEnv()->newWriteFile(std::to_string(++lb->cur_fileid_) + ".log");
+    lb->wf_ = Env::globalEnv()->newWriteFile(lb->db_name_ + "/" + std::to_string(++lb->cur_fileid_) + ".log");
     lb->file_size_ = 0;
-    fileNode *cur = new fileNode;
+    cur = new fileNode;
     cur->file_id = lb->cur_fileid_;
     cur->next = lb->activelist_.next;
     cur->prev = &lb->activelist_;
@@ -132,9 +135,10 @@ int LogBuilder::append(const string_view &key, const string_view &value, Handle 
     key.copy(file_buf_.data() + 20, key.size());
     value.copy(file_buf_.data() + 20 + key.size(), value.size());
     *reinterpret_cast<uint32_t *>(file_buf_.data()) = Mask(Value(file_buf_.data() + 4, file_buf_.size() - 4));
-    if(write(file_buf_) != 0) {
+    if(wf_->write(file_buf_) != file_buf_.size()) {
         return -1;
     }
+    wf_->flush();
 
     hashindex_.resize(hashindex_.size() + 8 + 4 + 4 + 4 + key.size());
     char *hdata = hashindex_.data() + hashindex_.size();
@@ -159,7 +163,7 @@ int LogBuilder::dump() {
     assert(activelist_.next != &activelist_);
 
     uint64_t fid = activelist_.next->file_id;
-    WriteFile *hwf = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".hindex");
+    WriteFile *hwf = Env::globalEnv()->newWriteFile(db_name_ + "/" + std::to_string(fid) + ".hindex");
     if(hwf == nullptr) {
         return -1;
     }
@@ -170,6 +174,7 @@ int LogBuilder::dump() {
         delete hwf;
         return -1;
     }
+    hwf->flush();
 
     delete hwf;
     delete wf_;
@@ -179,8 +184,9 @@ int LogBuilder::dump() {
     fnode->prev = &activelist_;
     activelist_.next->prev = fnode;
     activelist_.next = fnode;
-    wf_ = Env::globalEnv()->newWriteFile(std::to_string(fid) + ".log");
+    wf_ = Env::globalEnv()->newWriteFile(db_name_ + "/" + std::to_string(fid) + ".log");
     hashindex_.resize(8);
+    return 0;
 }
 
 void LogBuilder::compaction() {

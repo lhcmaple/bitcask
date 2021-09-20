@@ -73,8 +73,8 @@ Iter *LogReader::newIter() {
     return new Iterator(rf_);
 }
 
-LogReader *LogReader::newLogReader(uint64_t file_id) {
-    LogReader *lr = new LogReader(file_id);
+LogReader *LogReader::newLogReader(uint64_t file_id, const string_view &db_name) {
+    LogReader *lr = new LogReader(file_id, db_name);
     if(lr->rf_ == nullptr) {
         delete lr;
         return nullptr;
@@ -104,8 +104,8 @@ LogContent *LogReader::seek(const Handle &handle) {
     return lc;
 }
 
-HIndexReader *HIndexReader::newHIndexReader(uint64_t file_id) {
-    HIndexReader *hir = new HIndexReader(file_id);
+HIndexReader *HIndexReader::newHIndexReader(uint64_t file_id, const string_view &db_name) {
+    HIndexReader *hir = new HIndexReader(file_id, db_name);
     if(hir->rf_ == nullptr) {
         delete hir;
         hir = nullptr;

@@ -9,11 +9,12 @@ using std::pair;
 
 class DBImpl::Iterator : public Iter {
 private:
+    DBImpl *impl_;
     Iter *it_;
     string data_;
     pair<string, string> kv;
 public:
-    Iterator(DBImpl *impl) : it_(impl->ht_->newIter()) {
+    Iterator(DBImpl *impl) : impl_(impl), it_(impl->ht_->newIter()) {
         
     }
     bool isValid() override {
@@ -27,7 +28,7 @@ public:
     }
     void *get() override {
         Node *cur = static_cast<Node *>(it_->get());
-        LogReader *lr = LogReader::newLogReader(cur->handle.file_id);
+        LogReader *lr = LogReader::newLogReader(cur->handle.file_id, impl_->db_name_);
         assert(lr != nullptr);
         LogContent *lc = lr->seek(cur->handle);
         assert(lc != nullptr);
@@ -47,7 +48,6 @@ int DBImpl::put(const string_view &key, const string_view &value) {
     }
     Handle handle;
     GUARD_BEGIN(mutex_)
-        Lock lock(mutex_);
         if(lb_->append(key, value, &handle) != 0) {
             error = true;
             return -1;
@@ -64,19 +64,21 @@ int DBImpl::get(const string_view &key, string *value) {
     if(value != nullptr) {
         value->clear();
     }
-    const Node *cur = ht_->find(key);
-    if(cur == nullptr) {
-        return -1;
-    }
-    LogReader *lr = LogReader::newLogReader(cur->handle.file_id);
-    assert(lr == nullptr);
-    LogContent *lc = lr->seek(cur->handle);
-    if(lc == nullptr) {
-        error = true;
-        return -1;
-    }
-    value->swap(lc->value);
+    GUARD_BEGIN(mutex_)
+        const Node *cur = ht_->find(key);
+        if(cur == nullptr) {
+            return -1;
+        }
+        LogReader *lr = LogReader::newLogReader(cur->handle.file_id, db_name_);
+        assert(lr == nullptr);
+        LogContent *lc = lr->seek(cur->handle);
+        if(lc == nullptr) {
+            error = true;
+            return -1;
+        }
+        value->swap(lc->value);
     delete lc;
+    GUARD_END
     return 0;
 }
 
@@ -101,7 +103,7 @@ void *DBImpl::compactThread(void *arg) {
     }
     fileNode *fn = nullptr;
     while(fn = impl->lb_->compactFile()) {
-        LogReader *lr = LogReader::newLogReader(fn->file_id);
+        LogReader *lr = LogReader::newLogReader(fn->file_id, impl->db_name_);
         assert(lr != nullptr);
         Iter *it = lr->newIter();
         it->seekToFirst();
@@ -116,15 +118,15 @@ void *DBImpl::compactThread(void *arg) {
             GUARD_END
         }
         delete lr;
-        Env::globalEnv()->rmFile(std::to_string(fn->file_id) + ".log");
-        Env::globalEnv()->rmFile(std::to_string(fn->file_id) + ".hindex");
+        Env::globalEnv()->rmFile(impl->db_name_ + "/" + std::to_string(fn->file_id) + ".log");
+        Env::globalEnv()->rmFile(impl->db_name_ + "/" + std::to_string(fn->file_id) + ".hindex");
         delete fn;
     }
     impl->iscompacting_ = false;
     return 0;
 }
 
-int DBImpl::compact(bool background = true) {
+int DBImpl::compact(bool background) {
     if(error) {
         return -1;
     }
@@ -141,7 +143,7 @@ int DBImpl::compact(bool background = true) {
     if(background) {
         return Env::globalEnv()->newThread(DBImpl::compactThread, &info);
     } else {
-        return reinterpret_cast<int>(DBImpl::compactThread(&info));
+        return reinterpret_cast<long long>(DBImpl::compactThread(&info));
     }
 }
 

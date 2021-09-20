@@ -26,15 +26,16 @@ struct HIndexContent {
 
 class LogReader {
 private:
+    string db_name_;
     uint64_t file_id_;
     RandomReadFile *rf_;
     string data_;
 
     class Iterator;
 public:
-    static LogReader *newLogReader(uint64_t file_id);
-    LogReader(uint64_t file_id) : file_id_(file_id) {
-        rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(file_id_) + ".log");
+    static LogReader *newLogReader(uint64_t file_id, const string_view &db_name);
+    LogReader(uint64_t file_id, const string_view &db_name) : file_id_(file_id), db_name_(db_name) {
+        rf_ = Env::globalEnv()->newRandomReadFile(db_name_ + "/" + std::to_string(file_id_) + ".log");
     }
     LogContent *seek(const Handle &handle);
     ~LogReader() {
@@ -45,6 +46,7 @@ public:
 
 class HIndexReader {
 private:
+    string db_name_;
     uint64_t file_id_;
     RandomReadFile *rf_;
     string data;
@@ -53,9 +55,9 @@ private:
 
     class Iterator;
 public:
-    static HIndexReader *newHIndexReader(uint64_t file_id);
-    HIndexReader(uint64_t file_id) : file_id_(file_id) {
-        rf_ = Env::globalEnv()->newRandomReadFile(std::to_string(file_id_) + ".hindex");
+    static HIndexReader *newHIndexReader(uint64_t file_id, const string_view &db_name);
+    HIndexReader(uint64_t file_id, const string_view &db_name) : file_id_(file_id), db_name_(db_name) {
+        rf_ = Env::globalEnv()->newRandomReadFile(db_name_ + "/" + std::to_string(file_id_) + ".hindex");
         if(rf_ != nullptr) { //校验索引完整性
             examine();
         }

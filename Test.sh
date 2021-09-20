@@ -2,7 +2,7 @@
 
 [ -d .Test ] || mkdir .Test
 
-CPPFLAG="-I./util/ -I./include/ -std=c++17 -lpthread"
+CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 
 # arena_test
 # echo "-----test arena-----"
@@ -21,10 +21,10 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17 -lpthread"
 # echo
 
 # hashtable_test
-# echo "-----test hashtable-----"
-# g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
-# ./.Test/hashtable_test
-# echo "-----hashtable tested-----"
+echo "-----test hashtable-----"
+g++ $CPPFLAG -o .Test/hashtable_test util/hashtable_test.cc util/hashtable.cc util/hash.cc util/arena.cc
+./.Test/hashtable_test
+echo "-----hashtable tested-----"
 
 # echo
 
@@ -42,25 +42,12 @@ CPPFLAG="-I./util/ -I./include/ -std=c++17 -lpthread"
 # ./.Test/crc32c_test
 # echo "-----crc32c tested-----"
 
-function countline {
-    totalline=0
-    for name in `ls`
-    do
-        if [ -d $name ] 
-        then
-            cd $name
-            line=`countline $name`
-            totalline=$((totalline + line))
-            cd ..
-        fi
-    done
-    for name in `ls | grep -E "(cc$)|(h$)"`
-    do
-        line=`wc -l $name | awk '{print $1}'`
-        wc -l $name >&2
-        totalline=$((totalline + line))
-    done
-    echo $totalline
-}
+# echo
 
-echo "-----total lines of bitcask: `countline` lines-----"
+# # dbimpl_test
+# echo "-----test dbimpl-----"
+# allfiles="db/dbimpl_test.cc db/dbimpl.cc \
+# log/logbuilder.cc log/logreader.cc util/arena.cc \
+# util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc"
+# g++ -o .Test/dbimpl_test $allfiles $CPPFLAG
+# echo "-----dbimpl tested-----"
