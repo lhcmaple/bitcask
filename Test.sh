@@ -50,9 +50,9 @@ CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 # .Test/logbuilder_test .Test/db
 # echo "-----logbuilder tested-----"
 
-# logreader_test
-echo "-----test logreader-----"
-allfiles="log/logreader_test.cc log/logreader.cc \
-util/env_posix.cc util/hashtable.cc util/crc32c.cc util/arena.cc util/hash.cc"
-g++ -o .Test/logreader_test $allfiles $CPPFLAG
-echo "-----logreader tested-----"
+# # logreader_test
+# echo "-----test logreader-----"
+# allfiles="log/logreader_test.cc log/logreader.cc \
+# util/env_posix.cc util/hashtable.cc util/crc32c.cc util/arena.cc util/hash.cc"
+# g++ -o .Test/logreader_test $allfiles $CPPFLAG
+# echo "-----logreader tested-----"
