@@ -1,6 +1,7 @@
 #!/bin/bash
 
 [ -d .Test ] || mkdir .Test
+rm .Test/db/*
 
 CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 
@@ -56,3 +57,11 @@ CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 # util/env_posix.cc util/hashtable.cc util/crc32c.cc util/arena.cc util/hash.cc"
 # g++ -o .Test/logreader_test $allfiles $CPPFLAG
 # echo "-----logreader tested-----"
+
+# db_bench
+echo "-----benchmark-----"
+allfiles="db/dbimpl.cc benchmark/db_bench.cc \
+log/logbuilder.cc log/logreader.cc util/arena.cc \
+util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc"
+g++ -o .Test/db_bench $allfiles $CPPFLAG
+echo "-----benchmark-----"

@@ -16,9 +16,9 @@ int main(int argc, char *argv[]) {
         assert(iter != nullptr);
         iter->seekToFirst();
         for(; iter->isValid(); iter->next()) {
-            HIndexContent *hic = static_cast<HIndexContent *>(iter->get());
-            printf("[seq, off, size, key] : %20ld, %15d, %15d, %s\n", 
-                hic->sequence, hic->offset, hic->size, hic->key.c_str());
+            LogContent *lc = static_cast<LogContent *>(iter->get());
+            printf("[seq, key, value] : %20ld, %s, %s\n", 
+                lc->sequence, lc->key.c_str(), lc->value.c_str());
         }
         delete iter;
         delete lr;
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
         iter->seekToFirst();
         for(; iter->isValid(); iter->next()) {
             HIndexContent *hic = static_cast<HIndexContent *>(iter->get());
-            printf("[seq, key, value] : %20ld, %s, %15d, %15d\n", 
+            printf("[seq, key, offset, size] : %20ld, %s, %15d, %15d\n", 
                 hic->sequence, hic->key.c_str(), hic->offset, hic->size);
         }
         delete iter;

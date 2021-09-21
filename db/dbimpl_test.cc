@@ -1,17 +1,20 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <unistd.h>
+#include <iostream>
 
 #include "db.h"
 
 using namespace std;
 
-#define N 10000
+#define N 1000
 
 int main(int argc, char *argv[]) {
     // performance and correctness
     DB *db = DB::open(argv[1]);
     for(int k = 0; k < 10; k++) {
+        printf("-----[%d]-----\n", k);
         vector<pair<string, string>> kv(N);
         for(int i = 0; i < N; i++) {
             kv[i] = {to_string(i + 1'000'000'000), to_string(i + 1'000'000'000)};
@@ -72,12 +75,19 @@ int main(int argc, char *argv[]) {
             base.erase(kv->first);
             iter->next();
         }
+        // for(int i = 1; i < N; i += 2) {
+        //     db->del(kv[i].first);
+        // }
         const char *logic[2] = {"false", "true"};
         printf("operations correctness:       %s, %s, %s\n", logic[owned1 == owned2], logic[value1 == value2], logic[isequal]);
         printf("base structure time consumed: %f seconds\n", (double)dt_base / CLOCKS_PER_SEC);
         printf("hashtable time consumed:      %f seconds\n", (double)dt_ht / CLOCKS_PER_SEC);
         delete iter;
-        db->compact(true);
+        delete db;
+        db = DB::open(argv[1]);
+        db->compact(false);
+        printf("-----[%d]-----\n", k);
+        // cin.get();
     }
     delete db;
     return 0;

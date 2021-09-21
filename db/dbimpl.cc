@@ -58,6 +58,19 @@ int DBImpl::put(const string_view &key, const string_view &value) {
     return 0;
 }
 
+int DBImpl::putUnlock(const string_view &key, const string_view &value) {
+    if(error) {
+        return -1;
+    }
+    Handle handle;
+    if(lb_->append(key, value, &handle) != 0) {
+        error = true;
+        return -1;
+    }
+    ht_->insert(key, handle);
+    return 0;
+}
+
 int DBImpl::get(const string_view &key, string *value) {
     if(error) {
         return -1;
@@ -90,11 +103,13 @@ int DBImpl::del(const string_view &key) {
     }
     Handle handle;
     GUARD_BEGIN(mutex_)
-        if(lb_->append(key, "", &handle) != 0) {
-            error = true;
-            return -1;
+        if(ht_->find(key) != nullptr) {
+            if(lb_->append(key, "", &handle) != 0) {
+                error = true;
+                return -1;
+            }
+            ht_->erase(key);
         }
-        ht_->erase(key);
     GUARD_END
     return 0;
 }
@@ -125,9 +140,10 @@ void *DBImpl::compactThread(void *arg) {
             if(node == nullptr || node->handle.sequence > lc->sequence) {
                 continue;
             }
-            impl->put(lc->key, lc->value);
+            impl->putUnlock(lc->key, lc->value);
             GUARD_END
         }
+        delete it;
         delete lr;
         Env::globalEnv()->rmFile(impl->db_name_ + "/" + std::to_string(fn->file_id) + ".log");
         Env::globalEnv()->rmFile(impl->db_name_ + "/" + std::to_string(fn->file_id) + ".hindex");
@@ -153,7 +169,7 @@ int DBImpl::compact(bool background) {
     if(background) {
         return Env::globalEnv()->newThread(DBImpl::compactThread, info, &pid);
     } else {
-        return reinterpret_cast<long long>(DBImpl::compactThread(&info));
+        return reinterpret_cast<long long>(DBImpl::compactThread(info));
     }
 }
 

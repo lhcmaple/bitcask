@@ -16,6 +16,7 @@ private:
     uint64_t pid;
 
     static void *compactThread(void *arg);
+    int putUnlock(const string_view &key, const string_view &value);
 public:
     class Iterator;
 
