@@ -92,13 +92,17 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
                 lb->cur_sequence_ = std::max(lb->cur_sequence_, lc->sequence);
                 char *cur = nullptr;
                 size_t cur_off = hash_index.size();
-                hash_index.resize(hash_index.size() + 20 + lc->key.size());
+                hash_index.resize(hash_index.size() + 20 + lc->key.size() + 1);
                 cur = hash_index.data() + cur_off;
                 *reinterpret_cast<uint64_t *>(cur) = lc->sequence;
                 *reinterpret_cast<uint32_t *>(cur + 8) = offset;
                 *reinterpret_cast<uint32_t *>(cur + 12) = lc->key.size() + lc->value.size() + 20;
                 *reinterpret_cast<uint32_t *>(cur + 16) = lc->key.size() + 1;
-                cur[20] = '#';
+                if(lc->value.empty()) {
+                    cur[20] = '#';
+                } else {
+                    cur[20] = '*';
+                }
                 lc->key.copy(cur + 21, lc->key.size());
 
                 if(!lc->value.empty()) {
@@ -163,7 +167,11 @@ int LogBuilder::append(const string_view &key, const string_view &value, Handle 
     *reinterpret_cast<uint32_t *>(hdata + 8) = file_size_;
     *reinterpret_cast<uint32_t *>(hdata + 12) = file_buf_.size();
     *reinterpret_cast<uint32_t *>(hdata + 16) = key.size() + 1;
-    hdata[20] = '#';
+    if(value.empty()) {
+        hdata[20] = '#'; //删除
+    } else {
+        hdata[20] = '*'; //修改或增加
+    }
     key.copy(hdata + 21, key.size());
 
     handle->file_id = cur_fileid_;

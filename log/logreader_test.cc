@@ -3,6 +3,7 @@
 #include <cassert>
 #include <string>
 #include <cstdio>
+#include <iostream>
 
 using namespace std;
 
@@ -28,9 +29,9 @@ int main(int argc, char *argv[]) {
         assert(iter != nullptr);
         iter->seekToFirst();
         for(; iter->isValid(); iter->next()) {
-            LogContent *lc = static_cast<LogContent *>(iter->get());
-            printf("[seq, key, value] : %20ld, %s, %s\n", 
-                lc->sequence, lc->key.c_str(), lc->value.c_str());
+            HIndexContent *hic = static_cast<HIndexContent *>(iter->get());
+            printf("[seq, key, value] : %20ld, %s, %15d, %15d\n", 
+                hic->sequence, hic->key.c_str(), hic->offset, hic->size);
         }
         delete iter;
         delete hir;
