@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "hashtable.h"
 #include "env.h"
@@ -10,9 +11,12 @@
 using std::string_view;
 using std::string;
 using std::vector;
+using std::unordered_map;
 
 struct fileNode {
     uint64_t file_id;
+    uint32_t kv_size;
+    uint32_t file_size;
     fileNode *prev;
     fileNode *next;
 };
@@ -28,6 +32,7 @@ private:
     string hashindex_;
     uint64_t cur_fileid_;
     uint64_t cur_sequence_;
+    unordered_map<uint64_t, fileNode *> mfileNode; // file_id -> fileNode *
 
     int dump(bool isexit);
 public:
