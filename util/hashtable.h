@@ -15,6 +15,7 @@
 #include "iter.h"
 
 using std::string_view;
+using std::string;
 
 struct Handle {
     uint64_t file_id;
