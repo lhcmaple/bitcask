@@ -1,5 +1,5 @@
-#ifndef FILEIO_H
-#define FILEIO_H
+#ifndef ENV_H
+#define ENV_H
 
 #include <string>
 #include <cstddef>
@@ -20,9 +20,6 @@ typedef void *(*FunctionHandle)(void *);
 
 class Env {
 public:
-    WriteFile *newWriteFileCache(const string_view &fname, uint64_t file_id) {
-        
-    }
     virtual WriteFile *newWriteFile(const string_view &fname) = 0;
     virtual RandomReadFile *newRandomReadFile(const string_view &fname) = 0;
     virtual Mutex *newMutex() = 0;
@@ -32,7 +29,6 @@ public:
     int rmFile(const string_view &fname) {
         return remove(fname.data());
     }
-
     static Env *globalEnv();
 };
 

@@ -62,6 +62,6 @@ CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 echo "-----benchmark-----"
 allfiles="db/dbimpl.cc benchmark/db_bench.cc \
 log/logbuilder.cc log/logreader.cc util/arena.cc \
-util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc"
+util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc util/cache.cc"
 g++ -o .Test/db_bench $allfiles $CPPFLAG
 echo "-----benchmark-----"

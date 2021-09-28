@@ -13,4 +13,7 @@
 // 文件最小大小
 #define MIN_FILE_SIZE (LOG_FILE_SIZE_THRESHOLD / 64)
 
+// 缓存大小
+#define LRUCACHE_SIZE 64
+
 #endif
