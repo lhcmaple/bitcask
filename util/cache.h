@@ -3,86 +3,91 @@
 
 #include <unordered_map>
 
+#include "env.h"
+
 using std::unordered_map;
 using std::string;
 
 struct fdNode {
     uint64_t file_id; // key
-    int fd; // value
+    RandomReadFile *rf; // value
     int ref;
     fdNode *prev;
     fdNode *next;
 };
 
-struct kvNode {
-    string key;
-    string value;
-    int ref;
-    kvNode *prev;
-    kvNode *next;
-};
-
+// 获取一个读文件句柄时, 查询fdmap中是否已经存在, 存在则直接返回对应的fdNode指针, 否则清除最近最久未使用的fdNode, 并插入新的fdNode
 class LRUCache {
 private:
     size_t fd_count_;
-    size_t kv_count_;
     size_t fd_cachesize_;
-    size_t kv_cachesize_;
+    string db_name_;
 
     fdNode fdList;
-    kvNode kvList;
 
     unordered_map<uint64_t, fdNode *> fdmap;
-    unordered_map<string, kvNode *> kvmap;
 public:
-    LRUCache(size_t fd_cachesize, size_t kv_cachesize) 
-        : fd_cachesize_(fd_cachesize), kv_cachesize_(kv_cachesize) {
+    LRUCache(size_t fd_cachesize, const string &db_name) 
+        : fd_cachesize_(fd_cachesize), db_name_(db_name) {
+        assert(fd_cachesize_ > 0);
         fd_count_ = 0;
-        kv_count_ = 0;
         fdList.prev = &fdList;
         fdList.next = &fdList;
-        kvList.prev = &kvList;
-        kvList.next = &kvList;
     }
-    void insertkv(const string &key, const string &value) {
-        if(kvmap.count(key) == 1) {
-            kvNode *cur = kvmap[key];
-            cur->prev->next = cur->next;
-            cur->next->prev = cur->prev;
-            kv_count_--;
-            releasekv(cur);
+    fdNode *get(uint64_t file_id) {
+        if(fdmap.count(file_id) == 1) {
+            fdNode *ret = fdmap[file_id];
+            ret->prev->next = ret->next;
+            ret->next->prev = ret->prev;
+            ret->next = fdList.next;
+            ret->prev = &fdList;
+            fdList.next->prev = ret;
+            fdList.next = ret;
+            ret->ref++;
+            return ret;
         }
-        while(kv_count_ >= kv_cachesize_) {
-            kvNode *cur = kvList.prev;
-            cur->prev->next = cur->next;
-            cur->next->prev = cur->prev;
-            kv_count_--;
-            releasekv(cur);
+        while(fd_count_ >= fd_cachesize_) {
+            fdNode *dnode = fdList.prev;
+            dnode->prev->next = &fdList;
+            dnode->next->prev = dnode->prev;
+            fdmap.erase(dnode->file_id);
+            release(dnode);
+            fd_count_--;
         }
-        kvNode *cur = new kvNode;
-        cur->key = key;
-        cur->value = value;
-        cur->ref = 1; // ref by LRUCache
-        cur->next = kvList.next;
-        cur->prev = &kvList;
-        kvList.next->prev = cur;
-        kvList.next = cur;
-        kvmap[key] = cur;
+        fd_count_++;
+        fdNode *cur = new fdNode;
+        fdmap[file_id] = cur;
+        cur->file_id = file_id;
+        cur->next = fdList.next;
+        cur->prev = &fdList;
+        fdList.next->prev = cur;
+        fdList.next = cur;
+        cur->ref = 2;
+        cur->rf = Env::globalEnv()->newRandomReadFile(db_name_ + "/" + std::to_string(file_id) + ".log");
+        return cur;
     }
-    void *get(void *key) {
-
-    }
-    void releasekv(kvNode *node) {
+    void release(fdNode *node) {
         node->ref--;
         if(node->ref == 0) {
+            delete node->rf;
             delete node;
         }
     }
     void clearCache() {
-
+        fdNode *cur = fdList.next;
+        while(cur != &fdList) {
+            fdNode *next = cur->next;
+            release(cur);
+            cur = next;
+        }
+        fdmap.clear();
+        fd_count_ = 0;
+        fdList.next = &fdList;
+        fdList.prev = &fdList;
     }
     ~LRUCache() {
-
+        clearCache();
     }
 };
+
 #endif

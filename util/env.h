@@ -20,6 +20,9 @@ typedef void *(*FunctionHandle)(void *);
 
 class Env {
 public:
+    WriteFile *newWriteFileCache(const string_view &fname, uint64_t file_id) {
+        
+    }
     virtual WriteFile *newWriteFile(const string_view &fname) = 0;
     virtual RandomReadFile *newRandomReadFile(const string_view &fname) = 0;
     virtual Mutex *newMutex() = 0;
