@@ -70,13 +70,13 @@ public:
 };
 
 Iter *LogReader::newIter() {
-    return new Iterator(rf_);
+    return new Iterator(fdnode_->rf);
 }
 
 LogReader *LogReader::newLogReader(uint64_t file_id, const string_view &db_name) {
     LogReader *lr = new LogReader(file_id, db_name);
-    if(lr->rf_ == nullptr) {
-        delete lr;
+    if(lr->fdnode_->rf == nullptr) {
+        LRUCache::globalLRUCache()->release(lr->fdnode_);
         return nullptr;
     }
     return lr;
@@ -84,7 +84,7 @@ LogReader *LogReader::newLogReader(uint64_t file_id, const string_view &db_name)
 
 LogContent *LogReader::seek(const Handle &handle) {
     assert(handle.file_id == file_id_);
-    rf_->read(handle.size, &data_, handle.offset);
+    fdnode_->rf->read(handle.size, &data_, handle.offset);
     if(data_.size() < handle.size) {
         data_.clear();
         return nullptr;

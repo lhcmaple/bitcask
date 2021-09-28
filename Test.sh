@@ -39,7 +39,7 @@ CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 # echo "-----test dbimpl-----"
 # allfiles="db/dbimpl_test.cc db/dbimpl.cc \
 # log/logbuilder.cc log/logreader.cc util/arena.cc \
-# util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc"
+# util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc util/cache.cc"
 # g++ -o .Test/dbimpl_test $allfiles $CPPFLAG
 # echo "-----dbimpl tested-----"
 

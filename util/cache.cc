@@ -1,5 +1,8 @@
 #include "cache.h"
 
+static int hit = 0;
+static int missing = 0;
+
 LRUCache::LRUCache() {
     assert(LRUCACHE_SIZE > 0);
     fd_count_ = 0;
@@ -9,6 +12,7 @@ LRUCache::LRUCache() {
 
 fdNode *LRUCache::get(uint64_t file_id, const string_view &fname) {
     if(fdmap.count(file_id) == 1) {
+        hit++;
         fdNode *ret = fdmap[file_id];
         ret->prev->next = ret->next;
         ret->next->prev = ret->prev;
@@ -19,6 +23,7 @@ fdNode *LRUCache::get(uint64_t file_id, const string_view &fname) {
         ret->ref++;
         return ret;
     }
+    missing++;
     while(fd_count_ >= LRUCACHE_SIZE) {
         fdNode *dnode = fdList.prev;
         dnode->prev->next = &fdList;
@@ -31,12 +36,12 @@ fdNode *LRUCache::get(uint64_t file_id, const string_view &fname) {
     fdNode *cur = new fdNode;
     fdmap[file_id] = cur;
     cur->file_id = file_id;
+    cur->ref = 2;
+    cur->rf = Env::globalEnv()->newRandomReadFile(fname);
     cur->next = fdList.next;
     cur->prev = &fdList;
     fdList.next->prev = cur;
     fdList.next = cur;
-    cur->ref = 2;
-    cur->rf = Env::globalEnv()->newRandomReadFile(fname);
     return cur;
 }
 
@@ -62,5 +67,6 @@ void LRUCache::clearCache() {
 }
 
 LRUCache::~LRUCache() {
+    printf("hit, missing: %d, %d\n", hit, missing);
     clearCache();
 }

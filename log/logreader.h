@@ -4,6 +4,7 @@
 #include "iter.h"
 #include "env.h"
 #include "hashtable.h"
+#include "cache.h"
 
 #include <cstdint>
 #include <string>
@@ -28,18 +29,18 @@ class LogReader {
 private:
     string db_name_;
     uint64_t file_id_;
-    RandomReadFile *rf_;
+    fdNode *fdnode_;
     string data_;
 
     class Iterator;
 public:
     static LogReader *newLogReader(uint64_t file_id, const string_view &db_name);
     LogReader(uint64_t file_id, const string_view &db_name) : file_id_(file_id), db_name_(db_name) {
-        rf_ = Env::globalEnv()->newRandomReadFile(db_name_ + "/" + std::to_string(file_id_) + ".log");
+        fdnode_ = LRUCache::globalLRUCache()->get(file_id, db_name_ + "/" + std::to_string(file_id_) + ".log");
     }
     LogContent *seek(const Handle &handle);
     ~LogReader() {
-        delete rf_;
+        LRUCache::globalLRUCache()->release(fdnode_);
     }
     Iter *newIter();
 };
