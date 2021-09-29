@@ -12,7 +12,7 @@ function countline {
             cd ..
         fi
     done
-    for name in `ls | grep -E "(cc$)|(h$)"`
+    for name in `ls | grep -E "(.cc$)|(\.h$)" | grep -v "test\.cc"`
     do
         line=`wc -l $name | awk '{print $1}'`
         wc -l $name >&2

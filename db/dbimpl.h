@@ -28,7 +28,7 @@ public:
     }
     ~DBImpl() {
         if(iscompacting_) {
-            Env::globalEnv()->joinThread(pid);
+            Env::globalEnv()->joinThread(pid); // auto compaction 时会死锁, 应该加个判断之类的, iscompacting_改成枚举会好点, 并且在autocompact时监测该变量的状态
         }
         delete ht_;
         delete lb_;
@@ -37,7 +37,7 @@ public:
     int put(const string_view &key, const string_view &value) override;
     int get(const string_view &key, string *value) override;
     int del(const string_view &key) override;
-    int compact(bool background = true) override;
+    int compact(COMPACTION type) override;
     Iter *newIter() override;
     bool isValid() override {
         return !error;

@@ -35,13 +35,13 @@ CPPFLAG="-g -I./util/ -I./include/ -I./log -std=c++17 -lpthread"
 # ./.Test/crc32c_test
 # echo "-----crc32c tested-----"
 
-# dbimpl_test
-echo "-----test dbimpl-----"
-allfiles="db/dbimpl_test.cc db/dbimpl.cc \
-log/logbuilder.cc log/logreader.cc util/arena.cc \
-util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc util/cache.cc"
-g++ -o .Test/dbimpl_test $allfiles $CPPFLAG
-echo "-----dbimpl tested-----"
+# # dbimpl_test
+# echo "-----test dbimpl-----"
+# allfiles="db/dbimpl_test.cc db/dbimpl.cc \
+# log/logbuilder.cc log/logreader.cc util/arena.cc \
+# util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc util/cache.cc"
+# g++ -o .Test/dbimpl_test $allfiles $CPPFLAG
+# echo "-----dbimpl tested-----"
 
 # # logbuilder_test
 # echo "-----test logbuilder-----"
@@ -58,10 +58,10 @@ echo "-----dbimpl tested-----"
 # g++ -o .Test/logreader_test $allfiles $CPPFLAG
 # echo "-----logreader tested-----"
 
-# # db_bench
-# echo "-----benchmark-----"
-# allfiles="db/dbimpl.cc benchmark/db_bench.cc \
-# log/logbuilder.cc log/logreader.cc util/arena.cc \
-# util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc util/cache.cc"
-# g++ -o .Test/db_bench $allfiles $CPPFLAG
-# echo "-----benchmark-----"
+# db_bench
+echo "-----benchmark-----"
+allfiles="db/dbimpl.cc benchmark/db_bench.cc \
+log/logbuilder.cc log/logreader.cc util/arena.cc \
+util/crc32c.cc util/env_posix.cc util/hash.cc util/hashtable.cc util/cache.cc"
+g++ -o .Test/db_bench $allfiles $CPPFLAG
+echo "-----benchmark-----"

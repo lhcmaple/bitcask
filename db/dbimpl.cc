@@ -116,13 +116,17 @@ int DBImpl::del(const string_view &key) {
 
 struct Info {
     DBImpl *impl;
-    bool background;
+    COMPACTION type;
 };
 
 void *DBImpl::compactThread(void *arg) {
     Info *pinfo = static_cast<Info *>(arg);
     DBImpl *impl = pinfo->impl;
-    bool background = pinfo->background;
+    COMPACTION type = pinfo->type;
+    if(type == AUTO) {
+        autoCompaction(); //
+        return nullptr;
+    }
     delete pinfo;
     GUARD_BEGIN(impl->mutex_)
         impl->lb_->compaction();
@@ -150,10 +154,10 @@ void *DBImpl::compactThread(void *arg) {
         delete fn;
     }
     impl->iscompacting_ = false;
-    return 0;
+    return nullptr;
 }
 
-int DBImpl::compact(bool background) {
+int DBImpl::compact(COMPACTION type) {
     if(error) {
         return -1;
     }
@@ -165,8 +169,8 @@ int DBImpl::compact(bool background) {
     GUARD_END
     Info *info = new Info;
     info->impl = this;
-    info->background = background;
-    if(background) {
+    info->type = type;
+    if(type != FOREGROUND) {
         return Env::globalEnv()->newThread(DBImpl::compactThread, info, &pid);
     } else {
         return reinterpret_cast<long long>(DBImpl::compactThread(info));
