@@ -1,8 +1,5 @@
 #include "cache.h"
 
-static int hit = 0;
-static int missing = 0;
-
 LRUCache::LRUCache() {
     assert(LRUCACHE_SIZE > 0);
     fd_count_ = 0;
@@ -12,7 +9,6 @@ LRUCache::LRUCache() {
 
 fdNode *LRUCache::get(uint64_t file_id, const string_view &fname) {
     if(fdmap.count(file_id) == 1) {
-        hit++;
         fdNode *ret = fdmap[file_id];
         ret->prev->next = ret->next;
         ret->next->prev = ret->prev;
@@ -23,7 +19,6 @@ fdNode *LRUCache::get(uint64_t file_id, const string_view &fname) {
         ret->ref++;
         return ret;
     }
-    missing++;
     while(fd_count_ >= LRUCACHE_SIZE) {
         fdNode *dnode = fdList.prev;
         dnode->prev->next = &fdList;
@@ -67,6 +62,5 @@ void LRUCache::clearCache() {
 }
 
 LRUCache::~LRUCache() {
-    printf("hit, missing: %d, %d\n", hit, missing);
     clearCache();
 }

@@ -68,15 +68,15 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
             for(; it->isValid(); it->next()) {
                 HIndexContent *hic = static_cast<HIndexContent *>(it->get());
                 lb->cur_sequence_ = std::max(lb->cur_sequence_, hic->sequence);
-                if(hic->key[0] != '#') {
+                if(hic->size - 20 - hic->key.size() > 0) { // value length > 0
                     Handle handle;
                     handle.file_id = file_id;
                     handle.offset = hic->offset;
                     handle.sequence = hic->sequence;
                     handle.size = hic->size;
-                    htable->insert(string_view(hic->key.data() + 1, hic->key.size() - 1), handle);
-                } else if(htable->find(string_view(hic->key.data() + 1, hic->key.size() - 1)) != nullptr) {
-                    htable->erase(string_view(hic->key.data() + 1, hic->key.size() - 1));
+                    htable->insert(string_view(hic->key.data(), hic->key.size()), handle);
+                } else if(htable->find(string_view(hic->key.data(), hic->key.size())) != nullptr) {
+                    htable->erase(string_view(hic->key.data(), hic->key.size()));
                 }
             }
             delete it;
@@ -92,19 +92,13 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
                 lb->cur_sequence_ = std::max(lb->cur_sequence_, lc->sequence);
                 char *cur = nullptr;
                 size_t cur_off = hash_index.size();
-                hash_index.resize(hash_index.size() + 20 + lc->key.size() + 1);
+                hash_index.resize(hash_index.size() + 20 + lc->key.size());
                 cur = hash_index.data() + cur_off;
                 *reinterpret_cast<uint64_t *>(cur) = lc->sequence;
                 *reinterpret_cast<uint32_t *>(cur + 8) = offset;
                 *reinterpret_cast<uint32_t *>(cur + 12) = lc->key.size() + lc->value.size() + 20;
-                *reinterpret_cast<uint32_t *>(cur + 16) = lc->key.size() + 1;
-                if(lc->value.empty()) {
-                    cur[20] = '#';
-                } else {
-                    cur[20] = '*';
-                }
-                lc->key.copy(cur + 21, lc->key.size());
-
+                *reinterpret_cast<uint32_t *>(cur + 16) = lc->key.size();
+                lc->key.copy(cur + 20, lc->key.size());
                 if(!lc->value.empty()) {
                     Handle handle;
                     handle.file_id = file_id;
@@ -161,18 +155,13 @@ int LogBuilder::append(const string_view &key, const string_view &value, Handle 
 
     char *hdata = nullptr;
     size_t hdata_off = hashindex_.size();
-    hashindex_.resize(hashindex_.size() + 8 + 4 + 4 + 4 + key.size() + 1); // 补锅
+    hashindex_.resize(hashindex_.size() + 20 + key.size());
     hdata = hashindex_.data() + hdata_off;
     *reinterpret_cast<uint64_t *>(hdata) = cur_sequence_;
     *reinterpret_cast<uint32_t *>(hdata + 8) = file_size_;
     *reinterpret_cast<uint32_t *>(hdata + 12) = file_buf_.size();
-    *reinterpret_cast<uint32_t *>(hdata + 16) = key.size() + 1;
-    if(value.empty()) {
-        hdata[20] = '#'; //删除
-    } else {
-        hdata[20] = '*'; //修改或增加
-    }
-    key.copy(hdata + 21, key.size());
+    *reinterpret_cast<uint32_t *>(hdata + 16) = key.size();
+    key.copy(hdata + 20, key.size());
 
     handle->file_id = cur_fileid_;
     handle->offset = file_size_;
