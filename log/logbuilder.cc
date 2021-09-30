@@ -45,8 +45,11 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
         if(isLog(f)) {
             fileNode *fnode = new fileNode;
             fnode->file_id = std::stoull(f);
+            lb->filemap_[fnode->file_id] = fnode;
             fnode->next = cur->next;
             fnode->prev = cur;
+            fnode->invalid_size = 0;
+            fnode->file_size = 0;
             cur->next->prev = fnode;
             cur->next = fnode;
             log_set.insert(fnode->file_id);
@@ -68,6 +71,7 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
             for(; it->isValid(); it->next()) {
                 HIndexContent *hic = static_cast<HIndexContent *>(it->get());
                 lb->cur_sequence_ = std::max(lb->cur_sequence_, hic->sequence);
+                const Node *hashNode = htable->find(string_view(hic->key.data(), hic->key.size()));
                 if(hic->size - 20 - hic->key.size() > 0) { // value length > 0
                     Handle handle;
                     handle.file_id = file_id;
@@ -75,9 +79,13 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
                     handle.sequence = hic->sequence;
                     handle.size = hic->size;
                     htable->insert(string_view(hic->key.data(), hic->key.size()), handle);
-                } else if(htable->find(string_view(hic->key.data(), hic->key.size())) != nullptr) {
+                } else if(hashNode != nullptr) {
                     htable->erase(string_view(hic->key.data(), hic->key.size()));
                 }
+                if(hashNode != nullptr) {
+                    lb->filemap_[hashNode->handle.file_id]->invalid_size += hashNode->handle.size;
+                }
+                cur->file_size += hic->size;
             }
             delete it;
         } else {
@@ -90,15 +98,15 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
             for(; it->isValid(); it->next()) {
                 LogContent *lc = static_cast<LogContent *>(it->get());
                 lb->cur_sequence_ = std::max(lb->cur_sequence_, lc->sequence);
-                char *cur = nullptr;
+                char *hash_cur = nullptr;
                 size_t cur_off = hash_index.size();
                 hash_index.resize(hash_index.size() + 20 + lc->key.size());
-                cur = hash_index.data() + cur_off;
-                *reinterpret_cast<uint64_t *>(cur) = lc->sequence;
-                *reinterpret_cast<uint32_t *>(cur + 8) = offset;
-                *reinterpret_cast<uint32_t *>(cur + 12) = lc->key.size() + lc->value.size() + 20;
-                *reinterpret_cast<uint32_t *>(cur + 16) = lc->key.size();
-                lc->key.copy(cur + 20, lc->key.size());
+                hash_cur = hash_index.data() + cur_off;
+                *reinterpret_cast<uint64_t *>(hash_cur) = lc->sequence;
+                *reinterpret_cast<uint32_t *>(hash_cur + 8) = offset;
+                *reinterpret_cast<uint32_t *>(hash_cur + 12) = lc->key.size() + lc->value.size() + 20;
+                *reinterpret_cast<uint32_t *>(hash_cur + 16) = lc->key.size();
+                lc->key.copy(hash_cur + 20, lc->key.size());
                 if(!lc->value.empty()) {
                     Handle handle;
                     handle.file_id = file_id;
@@ -110,6 +118,7 @@ LogBuilder *LogBuilder::newLogBuilder(const string_view &db_name, HashTable *hta
                     htable->erase(lc->key);
                 }
                 offset += lc->key.size() + lc->value.size() + 20;
+                cur->file_size += lc->key.size() + lc->value.size() + 20;
             }
             *reinterpret_cast<uint32_t *>(hash_index.data() + 4) = hash_index.size();
             *reinterpret_cast<uint32_t *>(hash_index.data()) = Mask(Value(hash_index.data() + 4, hash_index.size() - 4));

@@ -16,6 +16,7 @@ private:
     uint64_t pid;
 
     static void *compactThread(void *arg);
+    static void autoCompaction();
     int putUnlock(const string_view &key, const string_view &value);
 public:
     class Iterator;
@@ -28,6 +29,7 @@ public:
     }
     ~DBImpl() {
         if(iscompacting_) {
+            iscompacting_ = false;
             Env::globalEnv()->joinThread(pid); // auto compaction 时会死锁, 应该加个判断之类的, iscompacting_改成枚举会好点, 并且在autocompact时监测该变量的状态
         }
         delete ht_;

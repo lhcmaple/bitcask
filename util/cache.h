@@ -3,17 +3,19 @@
 
 #include <unordered_map>
 #include <cassert>
+#include <atomic>
 
 #include "env.h"
 #include "config.h"
 
 using std::unordered_map;
 using std::string_view;
+using std::atomic;
 
 struct fdNode {
     uint64_t file_id; // key
     RandomReadFile *rf; // value
-    int ref;
+    atomic<int> ref;
     fdNode *prev;
     fdNode *next;
 };
@@ -22,8 +24,9 @@ struct fdNode {
 class LRUCache {
 private:
     size_t fd_count_;
-    fdNode fdList;
-    unordered_map<uint64_t, fdNode *> fdmap;
+    fdNode fdList_;
+    unordered_map<uint64_t, fdNode *> fdmap_;
+    Mutex *mutex_;
 
     LRUCache();
 public:

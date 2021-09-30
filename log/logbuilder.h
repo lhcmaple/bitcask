@@ -15,7 +15,7 @@ using std::unordered_map;
 
 struct fileNode {
     uint64_t file_id;
-    uint32_t kv_size;
+    uint32_t invalid_size;
     uint32_t file_size;
     fileNode *prev;
     fileNode *next;
@@ -26,6 +26,7 @@ private:
     string db_name_;
     fileNode activelist_;
     fileNode compactlist_; // empty list unless being compacted
+    unordered_map<uint64_t, fileNode *> filemap_;
     WriteFile *wf_;
     size_t file_size_;
     string file_buf_;
